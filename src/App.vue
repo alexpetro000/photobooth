@@ -1,32 +1,54 @@
-<template>
-  <div id="app">
-    <div id="nav">
-      <router-link to="/">Home</router-link> |
-      <router-link to="/about">About</router-link>
-    </div>
-    <router-view/>
-  </div>
+<template lang="pug">
+    router-view
 </template>
 
-<style lang="scss">
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-}
+<script>
 
-#nav {
-  padding: 30px;
+export default {
+    name: 'App',
 
-  a {
-    font-weight: bold;
-    color: #2c3e50;
+    components: {
+    },
 
-    &.router-link-exact-active {
-      color: #42b983;
-    }
-  }
-}
-</style>
+    data: () => ({
+        appBar: true,
+        carousel: 1,
+        carouselTouchHandler: {
+            left: 'swipeL',
+            // right: swipeR,
+            up: () => this.swipe('Up'),
+            down: () => this.swipe('Down'),
+        },
+
+        leftDrawer: false,
+        wifi_selected: '',
+        wifi_list: [],
+        wifi_loading: true,
+        items: [
+            {
+                src: 'https://cdn.vuetifyjs.com/images/carousel/squirrel.jpg',
+            },
+            {
+                src: 'https://cdn.vuetifyjs.com/images/carousel/sky.jpg',
+            },
+            {
+                src: 'https://cdn.vuetifyjs.com/images/carousel/bird.jpg',
+            },
+            {
+                src: 'https://cdn.vuetifyjs.com/images/carousel/planet.jpg',
+            },
+        ],
+    }),
+    methods: {
+        swipeL() {
+            this.carousel++;
+        },
+        swipeR() {
+            this.carousel--;
+        },
+        swipe(direction) {
+            console.log(direction);
+        },
+    },
+};
+</script>
