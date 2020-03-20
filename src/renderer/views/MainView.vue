@@ -1,5 +1,6 @@
 <template lang="pug">
     v-app
+        Preview
         v-navigation-drawer(
             v-model="leftDrawer"
             app
@@ -9,24 +10,7 @@
         )
             | Lala
         v-content
-            v-container(fluid)
-                v-row(dense)
-                    v-col(cols="4")
-                        v-card(height="100%" @click="takeShot")
-                            //v-btn(block x-large)
-                            v-container(fluid)
-                                v-row(justify="center")
-                                    v-icon(x-large) mdi-camera-plus
-                            v-card-actions.pt-10(@click.stop @mousedown.stop @touchstart.stop)
-                                v-spacer
-                                v-btn(x-large icon text)
-                                    v-icon mdi-send
-                    v-col(
-                        v-for="(item, i) in items"
-                        :key="i"
-                        cols="4"
-                    )
-                        v-img(aspect-ratio="1" :src="item")
+            Gallery
             v-toolbar.app-bar(
                 dense
                 flat
@@ -44,17 +28,13 @@
 </template>
 
 <script>
-
-// const fs = require('fs');
-// const gphoto2 = require('gphoto2');
-//
-// const GPhoto = new gphoto2.GPhoto2();
+import Gallery from '../components/Gallery';
+import Preview from '../components/Preview';
 
 export default {
     name: 'App',
 
-    components: {
-    },
+    components: { Gallery, Preview },
 
     data: () => ({
         appBar: true,
@@ -65,18 +45,6 @@ export default {
             'https://cdn.vuetifyjs.com/images/carousel/bird.jpg',
         ],
     }),
-    methods: {
-        takeShot() {
-            console.log('shot');
-        },
-    },
-    mounted() {
-        setTimeout(() => {
-            this.items.push(
-                'https://cdn.vuetifyjs.com/images/carousel/planet.jpg',
-            );
-        }, 2500);
-    },
 };
 </script>
 
