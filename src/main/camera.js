@@ -1,111 +1,60 @@
 const path = require('path');
 const fs = require('fs');
 const svg2img = require('svg2img');
-const utils = require('./utils');
+const { exec } = require('child_process');
 
-const gphoto2 = utils.config.state.gphoto.simulate
-    ? null
-    // eslint-disable-next-line import/order
-    : require('gphoto2');
+const utils = require('./utils');
 
 class Camera {
     constructor() {
-        if (gphoto2 === null) {
-            return;
-        }
-        this.GPhoto = new gphoto2.GPhoto2();
-        this.GPhoto.setLogLevel(1);
-        this.GPhoto.on('log', (level, domain, message) => {
-            console.log(domain, message);
-        });
+        this.initialized = false;
+        this.simulate = utils.config.state.gphoto.simulate;
     }
 
-    async init() {
-        console.log('init');
+    init() {
         return new Promise((resolve, reject) => {
-            if (gphoto2 === null) {
+            if (this.initialized) {
                 resolve();
                 return;
             }
-            this.GPhoto.list((list) => {
-                if (list.length === 0) {
-                    console.log('No camera found');
-                    reject(new Error('No camera found'));
-                    return;
-                }
-                [this.camera] = list;
-                if (utils.config.state.gphoto.capturetarget) {
-                    this.camera.setConfigValue('capturetarget', utils.config.state.gphoto.capturetarget, (err) => {
-                        if (err) {
-                            console.log('setting config failed:\n' + err);
-                            reject(new Error('setting config failed:\n' + err));
-                            this.camera = undefined;
-                        } else {
-                            resolve();
-                        }
-                    });
-                }
-            });
-        });
-    }
-
-    async takePhoto() {
-        console.log('takePhoto');
-        if (this.busy) {
-            return Promise.reject(new Error('busy'));
-        }
-        this.busy = true;
-
-        let promise;
-        if (gphoto2 === null) {
-            promise = this._createSamplePicture()
-                .then((data) => this._save(data));
-        } else {
-            promise = this._takePictureWithCamera()
-                .catch(() => this.init()
-                    .then(() => this._takePictureWithCamera(), (err) => {
-                        throw err;
-                    }))
-                .then((data) => this._save(data));
-        }
-        return promise.then(
-            (url) => {
-                this.busy = false;
-                return url;
-            },
-            (err) => {
-                this.busy = false;
-                throw err;
-            },
-        );
-    }
-
-    async _takePictureWithCamera() {
-        return new Promise((resolve, reject) => {
-            if (this.camera === undefined) {
-                console.log('camera not initialized');
-                reject(new Error('camera not initialized'));
-                return;
-            }
-            const keep = utils.config.state.gphoto.keep === true;
-            console.log('camera.takePicture');
-            this.camera.takePicture({
-                download: true,
-                keep,
-            }, (err, data) => {
+            exec('gphoto2 --set-config capturetarget=0', (err, stdout, stderr) => {
                 if (err) {
-                    this.camera = undefined;
-                    console.log('connection to camera failed:\n' + err);
-                    reject(new Error('connection to camera failed:\n' + err));
-                    return;
+                    this.initialized = false;
+                    console.error('init failed');
+                    reject(new Error(stderr));
+                } else {
+                    this.initialized = true;
+                    console.log('init ok');
+                    resolve();
                 }
-                console.log('\tOK');
-                resolve(data);
             });
         });
     }
 
-    async _createSamplePicture() {
+    takePhoto() {
+        console.log('takePhoto');
+        return this.simulate
+            ? this._createSamplePicture()
+            : this.init().then(() => this._takePictureWithCamera());
+    }
+
+    _takePictureWithCamera() {
+        return new Promise((resolve, reject) => {
+            const filename = 'img_' + utils.getTimestamp();
+            const filePath = path.join(utils.photosDir, 'originals', filename);
+
+            exec(`gphoto2 --no-keep --force-overwrite --filename ${filePath} --capture-image-and-download`, (err, stdout, stderr) => {
+                if (err) {
+                    this.initialized = false;
+                    reject(new Error(stderr));
+                } else {
+                    resolve(filename);
+                }
+            });
+        });
+    }
+
+    _createSamplePicture() {
         return new Promise((resolve, reject) => {
             console.log('sample picture');
 
@@ -118,21 +67,16 @@ class Camera {
                 if (err) {
                     reject(new Error('failed to create sample picture' + err));
                 } else {
-                    resolve(data);
-                }
-            });
-        });
-    }
+                    const filename = 'img_' + utils.getTimestamp();
+                    const filePath = path.join(utils.photosDir, 'originals', filename);
 
-    async _save(data) {
-        return new Promise((resolve, reject) => {
-            const filename = 'img_' + utils.getTimestamp();
-            const filePath = path.join(utils.photosDir, 'originals', filename);
-            fs.writeFile(filePath, data, (err) => {
-                if (err) {
-                    reject(new Error('saving image failed'), err);
+                    fs.writeFile(filePath, data, (saveError) => {
+                        if (saveError) {
+                            reject(new Error('saving image failed'), err);
+                        }
+                        resolve(filename);
+                    });
                 }
-                resolve(filename);
             });
         });
     }
