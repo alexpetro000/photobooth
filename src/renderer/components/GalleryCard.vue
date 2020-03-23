@@ -14,10 +14,10 @@
 
 <script>
 import { mapGetters } from 'vuex';
-import ConfirmButton from '../../components/ConfirmButton';
+import ConfirmButton from './ConfirmButton';
 
 export default {
-    name: 'PhotoCard',
+    name: 'GalleryCard',
     components: { ConfirmButton },
     props: ['photo'],
     data: () => ({

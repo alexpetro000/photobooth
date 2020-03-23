@@ -1,8 +1,8 @@
 import Vue from 'vue';
 import VueRouter from 'vue-router';
 
-import MainView from '../views/MainView/index';
-import EditorView from '../views/EditorView/index';
+import MainView from '../views/MainView';
+import EditorView from '../views/EditorView';
 
 Vue.use(VueRouter);
 

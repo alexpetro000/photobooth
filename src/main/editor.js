@@ -2,7 +2,7 @@ const im = require('imagemagick');
 
 function imConvert(args) {
     return new Promise((resolve, reject) => {
-        console.log(args);
+        console.log(args.join(' '));
         im.convert(args, (err, stdout) => {
             console.log(stdout);
             if (err) reject(stdout);
@@ -11,20 +11,21 @@ function imConvert(args) {
     });
 }
 
-async function proceed(input, options, output) {
+async function process(input, preset, output) {
+    console.log('processing:', preset);
     const args = [input];
-    /* if ('crop' in options) {
-        const { crop } = options;
+    /* if ('crop' in preset) {
+        const { crop } = preset;
         args.push('-crop', `${crop.w}x${crop.h}+${crop.x}+${crop.y}`, '+repage');
     } */
-    if ('greenKeys' in options) {
+    if ('greenKeys' in preset) {
         args.push('(', '-clone', '0');
-        options.greenKeys.forEach(({ key, fuzz }) => {
-            args.push('-transparent', key, '-fuzz', fuzz + '%');
+        preset.greenKeys.forEach(({ color, fuzz }) => {
+            args.push('-fuzz', fuzz + '%', '-transparent', color);
         });
         args.push('-alpha', 'extract');
-        if ('erode' in options) args.push('-morphology', 'Erode', `Octagon:${options.erode}`);
-        if ('blur' in options) args.push('-blur', `${options.blur}x${options.blur}`);
+        if ('erode' in preset) args.push('-morphology', 'Erode', `Octagon:${preset.erode}`);
+        if ('blur' in preset) args.push('-blur', `${preset.blur}x${preset.blur}`);
         args.push(')', '-compose', 'CopyOpacity', '-composite');
     }
     args.push(output);
@@ -34,5 +35,5 @@ async function proceed(input, options, output) {
 }
 
 module.exports = {
-    proceed,
+    process,
 };

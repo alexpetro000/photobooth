@@ -17,6 +17,11 @@ wifi.init({
     iface: utils.config.state.iface,
 });
 
+protocol.registerSchemesAsPrivileged([{
+    scheme: protocolName,
+    privileges: { secure: true, standard: true, supportFetchAPI: true },
+}]);
+
 app.on('ready', () => {
     protocol.registerFileProtocol(protocolName, (request, callback) => {
         const url = request.url.substr(protocolName.length + 3).split('?')[0];
@@ -26,11 +31,10 @@ app.on('ready', () => {
     });
 });
 
-ipc.answerRenderer('fetch-photo', async (options) => {
-    console.log('fetch-photo', JSON.stringify(options));
+ipc.answerRenderer('process-photo', async (options) => {
+    console.log('process-photo', JSON.stringify(options));
 
     if (!options.name) return false;
-    // let base64;
 
     if (options.preset !== null) {
         let preset;
@@ -41,7 +45,7 @@ ipc.answerRenderer('fetch-photo', async (options) => {
         } else {
             preset = utils.preset.state.default;
         }
-        const edited = path.join(utils.photosDir, 'edited', options.name);
+        const edited = path.join(utils.photosDir, options.tmp ? 'tmp' : 'edited', options.name);
 
         const existingPreset = await fsPromises.access(edited + '.png')
             .then(() => fsPromises.readFile(edited + '.json'))
@@ -50,14 +54,14 @@ ipc.answerRenderer('fetch-photo', async (options) => {
 
         if (!isEqual(preset, existingPreset)) {
             const input = path.join(utils.photosDir, 'originals', options.name);
-            await editor.proceed(input, preset, edited + '.png');
+            await editor.process(input, preset, edited + '.png');
             fs.writeFileSync(edited + '.json', JSON.stringify(preset));
         }
-        return protocolName + '://edited/' + options.name + '.png';
+        return `${protocolName}://${options.tmp ? 'tmp' : 'edited'}/${options.name}.png?t=${Date.now()}`;
         // base64 = await image2base64(file);
         // fs.unlink(file, (err) => { if (err) console.error(err); });
     } else {
-        return protocolName + '://originals/' + options.name;
+        return `${protocolName}://originals/${options.name}?t=${Date.now()}`;
     }
 });
 
@@ -102,6 +106,8 @@ ipc.answerRenderer('delete-photo', (photo) => {
     fs.unlink(path.join(utils.photosDir, 'originals', photo.name), logError);
     fs.unlink(path.join(utils.photosDir, 'edited', photo.name + '.png'), logError);
     fs.unlink(path.join(utils.photosDir, 'edited', photo.name + '.json'), logError);
+    fs.unlink(path.join(utils.photosDir, 'tmp', photo.name + '.json'), logError);
+    fs.unlink(path.join(utils.photosDir, 'tmp', photo.name + '.json'), logError);
     utils.session.state = utils.session.state.filter((item) => item.name !== photo.name);
 });
 

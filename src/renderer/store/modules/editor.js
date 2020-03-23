@@ -1,3 +1,5 @@
+import Vue from 'vue';
+
 const { ipcRenderer: ipc } = require('electron-better-ipc');
 
 export default {
@@ -9,6 +11,11 @@ export default {
         setPresets(state, presets) {
             state.presets = presets;
         },
+
+        setPhotoUrl(state, { photo, url }) {
+            Vue.set(state.urls, photo.name, url);
+            // state.urls[] = url;
+        },
     },
     actions: {
         fetchAll: {
@@ -17,7 +24,7 @@ export default {
                 dispatch('fetchPresets');
             },
         },
-        async fetchSession({ commit }) {
+        async fetchPresets({ commit }) {
             commit('setPresets', await ipc.callMain('fetch-session'));
         },
     },

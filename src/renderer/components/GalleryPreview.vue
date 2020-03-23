@@ -27,7 +27,7 @@
 import { mapGetters } from 'vuex';
 
 export default {
-    name: 'Preview',
+    name: 'GalleryPreview',
     computed: {
         preview() {
             return this.$store.state.gallery.preview;

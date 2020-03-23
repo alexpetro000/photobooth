@@ -69,14 +69,14 @@ export default {
             const session = await ipc.callMain('fetch-session');
             commit('setSession', session);
             session.forEach((photo) => {
-                dispatch('fetchPhoto', photo);
+                dispatch('processPhoto', photo);
             });
         },
 
-        async fetchPhoto({ commit }, photo) {
+        async processPhoto({ commit }, photo) {
             commit('setPhotoUrl', {
                 photo,
-                url: await ipc.callMain('fetch-photo', photo).catch(console.err),
+                url: await ipc.callMain('process-photo', photo).catch(console.err),
             });
         },
 
@@ -94,7 +94,7 @@ export default {
             try {
                 const photo = await ipc.callMain('take-photo');
                 commit('addPhoto', photo);
-                await dispatch('fetchPhoto', photo);
+                await dispatch('processPhoto', photo);
 
                 if (state.preview) {
                     commit('setPreview', photo);

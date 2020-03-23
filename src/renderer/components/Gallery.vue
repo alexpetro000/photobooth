@@ -21,7 +21,7 @@
 
 <script>
 import { mapState } from 'vuex';
-import PhotoCard from './PhotoCard';
+import PhotoCard from './GalleryCard';
 
 export default {
     name: 'Gallery',
