@@ -1,0 +1,40 @@
+<template lang="pug">
+    v-card
+        v-img(:src="getUrl(photo)" @click="openEditor")
+        //v-card-actions
+            v-spacer
+            v-btn.mx-2(icon text @click="openEditor")
+                v-icon mdi-pencil
+            ConfirmButton(
+                icon="mdi-delete"
+                question="Delete photo?"
+                @confirmed="deletePhoto(photo)"
+            )
+</template>
+
+<script>
+import { mapGetters } from 'vuex';
+import ConfirmButton from '../../components/ConfirmButton';
+
+export default {
+    name: 'PhotoCard',
+    components: { ConfirmButton },
+    props: ['photo'],
+    data: () => ({
+        deleteDialog: false,
+    }),
+    computed: {
+        ...mapGetters('gallery', [
+            'getUrl',
+        ]),
+    },
+    methods: {
+        deletePhoto(photo) {
+            this.$store.dispatch('gallery/deletePhoto', photo);
+        },
+        openEditor() {
+            this.$router.push(`/edit/${this.photo.name}`);
+        },
+    },
+};
+</script>

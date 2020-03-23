@@ -16,7 +16,7 @@ module.exports = {
                     .add('./src/renderer/main.js')
                     .end();
                 config.resolve.alias
-                    .set('@', path.join(__dirname, './src/renderer'));
+                    .set('@', path.resolve(__dirname, './src/renderer'));
             },
         },
     },

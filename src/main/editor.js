@@ -12,13 +12,11 @@ function imConvert(args) {
 }
 
 async function proceed(input, options, output) {
-    // const output = path.join(utils.photosDir, 'tmp', utils.getRandomString() + '.png');
-
     const args = [input];
-    if ('crop' in options) {
+    /* if ('crop' in options) {
         const { crop } = options;
         args.push('-crop', `${crop.w}x${crop.h}+${crop.x}+${crop.y}`, '+repage');
-    }
+    } */
     if ('greenKeys' in options) {
         args.push('(', '-clone', '0');
         options.greenKeys.forEach(({ key, fuzz }) => {

@@ -4,7 +4,8 @@ const fs = require('fs');
 const fsPromises = require('fs').promises;
 const path = require('path');
 const uuidV4 = require('uuid').v4;
-const lodash = require('lodash');
+const { isEqual } = require('lodash');
+const wifi = require('node-wifi');
 
 const utils = require('./utils');
 const camera = require('./camera');
@@ -12,9 +13,13 @@ const editor = require('./editor');
 
 const protocolName = 'content';
 
+wifi.init({
+    iface: utils.config.state.iface,
+});
+
 app.on('ready', () => {
     protocol.registerFileProtocol(protocolName, (request, callback) => {
-        const url = request.url.substr(protocolName.length + 3);
+        const url = request.url.substr(protocolName.length + 3).split('?')[0];
         callback({ path: path.join(utils.photosDir, url) });
     }, (error) => {
         if (error) console.error('Failed to register protocol');
@@ -43,7 +48,7 @@ ipc.answerRenderer('fetch-photo', async (options) => {
             .then((buf) => JSON.parse(buf.toString()))
             .catch(() => null);
 
-        if (!lodash.isEqual(preset, existingPreset)) {
+        if (!isEqual(preset, existingPreset)) {
             const input = path.join(utils.photosDir, 'originals', options.name);
             await editor.proceed(input, preset, edited + '.png');
             fs.writeFileSync(edited + '.json', JSON.stringify(preset));
@@ -103,3 +108,11 @@ ipc.answerRenderer('delete-photo', (photo) => {
 ipc.answerRenderer('save-preset', ({ name, preset }) => {
     utils.preset.state[name] = preset;
 });
+
+ipc.answerRenderer('fetch-preset', (name) => utils.preset.state[name]);
+
+ipc.answerRenderer('scan-wifi', () => wifi.scan());
+
+ipc.answerRenderer('get-current-wifi', () => wifi.getCurrentConnections());
+
+ipc.answerRenderer('connect-wifi', ({ ssid, password }) => wifi.connect({ ssid, password }));

@@ -29,5 +29,6 @@ module.exports = {
         'no-trailing-spaces': ['error', { skipBlankLines: true }],
         'no-param-reassign': 'off',
         'no-else-return': 'off',
+        'func-names': ['error', 'as-needed'],
     },
 };

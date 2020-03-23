@@ -1,3 +1,5 @@
+import Vue from 'vue';
+
 const { ipcRenderer: ipc } = require('electron-better-ipc');
 
 let previewTimeoutId = null;
@@ -11,7 +13,17 @@ export default {
     },
 
     getters: {
-        getUrl: (state) => (photo) => state.urls[photo.name],
+        getUrl: (state) => (photo) => {
+            switch (typeof photo) {
+            case 'string':
+                return state.urls[photo];
+            case 'object':
+                return state.urls[photo.name];
+            default:
+                return '';
+            }
+        },
+        getPhoto: (state) => (name) => state.session.find((p) => p.name === name),
     },
 
     mutations: {
@@ -23,8 +35,15 @@ export default {
             state.session.push(photo);
         },
 
+        setPhotoPreset(state, { name, preset }) {
+            // console.log('savePreset', name, JSON.stringify(preset));
+
+            Vue.set(state.session.find((p) => p.name === name), 'preset', preset);
+        },
+
         setPhotoUrl(state, { photo, url }) {
-            state.urls[photo.name] = url;
+            Vue.set(state.urls, photo.name, url);
+            // state.urls[] = url;
         },
 
         deletePhoto(state, photo) {

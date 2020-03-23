@@ -7,6 +7,7 @@ const { ipcRenderer: ipc } = require('electron-better-ipc');
 Vue.use(Vuex);
 
 export default new Vuex.Store({
+    strict: process.env.NODE_ENV !== 'production',
     modules: {
         gallery,
     },

@@ -1,7 +1,8 @@
 import Vue from 'vue';
 import VueRouter from 'vue-router';
 
-import MainView from '../views/MainView';
+import MainView from '../views/MainView/index';
+import EditorView from '../views/EditorView/index';
 
 Vue.use(VueRouter);
 
@@ -10,6 +11,11 @@ const routes = [
         path: '/',
         name: 'Main',
         component: MainView,
+    },
+    {
+        path: '/edit/:name',
+        name: 'Editor',
+        component: EditorView,
     },
 ];
 

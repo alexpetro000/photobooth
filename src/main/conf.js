@@ -1,7 +1,7 @@
+const { debounce, cloneDeep } = require('lodash');
 const path = require('path');
 const fs = require('fs');
 const { app } = require('electron');
-const lodash = require('lodash');
 
 const userDir = app.getPath('userData');
 
@@ -43,7 +43,7 @@ class Conf {
     constructor(filename, debounceTime = 100) {
         this._file = path.join(userDir, filename);
         const obj = JSON.parse(fs.readFileSync(this._file));
-        this.save = lodash.debounce(() => {
+        this.save = debounce(() => {
             fs.writeFileSync(this._file, JSON.stringify(this.state, null, 4));
             console.log('config saved');
         }, debounceTime);
@@ -59,7 +59,7 @@ class Conf {
     }
 
     clone() {
-        return lodash.cloneDeep(this.state);
+        return cloneDeep(this.state);
     }
 
     set state(obj) {
