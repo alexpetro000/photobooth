@@ -24,13 +24,13 @@ export default {
         deleteDialog: false,
     }),
     computed: {
-        ...mapGetters('gallery', [
+        ...mapGetters('session', [
             'getUrl',
         ]),
     },
     methods: {
         deletePhoto(photo) {
-            this.$store.dispatch('gallery/deletePhoto', photo);
+            this.$store.dispatch('session/deletePhoto', photo);
         },
         openEditor() {
             this.$router.push(`/edit/${this.photo.name}`);

@@ -24,21 +24,21 @@
 </template>
 
 <script>
-import { mapGetters } from 'vuex';
+import { mapGetters, mapState } from 'vuex';
 
 export default {
     name: 'GalleryPreview',
     computed: {
-        preview() {
-            return this.$store.state.gallery.preview;
-        },
-        ...mapGetters('gallery', [
+        ...mapState('session', [
+            'preview',
+        ]),
+        ...mapGetters('session', [
             'getUrl',
         ]),
     },
     methods: {
         close() {
-            this.$store.commit('gallery/setPreview', false);
+            this.$store.commit('session/setPreview', false);
         },
     },
 };

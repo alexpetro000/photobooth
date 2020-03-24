@@ -23,7 +23,11 @@ export default {
                 return '';
             }
         },
-        getPhoto: (state) => (name) => state.session.find((p) => p.name === name),
+        getPhoto: (state) => (name) => {
+            if (typeof name === 'object' && 'name' in name) name = name.name;
+            if (!state.session) return {};
+            return state.session.find((p) => p.name === name);
+        },
     },
 
     mutations: {
@@ -61,23 +65,25 @@ export default {
         fetchAll: {
             root: true,
             handler({ dispatch }) {
-                dispatch('fetchSession');
+                dispatch('fetch');
             },
         },
 
-        async fetchSession({ dispatch, commit }) {
+        async fetch({ dispatch, commit }) {
             const session = await ipc.callMain('fetch-session');
             commit('setSession', session);
             session.forEach((photo) => {
-                dispatch('processPhoto', photo);
+                (async () => {
+                    commit('setPhotoUrl', {
+                        photo,
+                        url: await dispatch('processPhoto', photo),
+                    });
+                })();
             });
         },
 
-        async processPhoto({ commit }, photo) {
-            commit('setPhotoUrl', {
-                photo,
-                url: await ipc.callMain('process-photo', photo).catch(console.err),
-            });
+        async processPhoto(_, photo) {
+            return ipc.callMain('process-photo', photo).catch(console.err);
         },
 
         deletePhoto({ commit }, photo) {
@@ -94,7 +100,11 @@ export default {
             try {
                 const photo = await ipc.callMain('take-photo');
                 commit('addPhoto', photo);
-                await dispatch('processPhoto', photo);
+                const url = await dispatch('processPhoto', photo);
+                commit('setPhotoUrl', {
+                    photo,
+                    url,
+                });
 
                 if (state.preview) {
                     commit('setPreview', photo);

@@ -29,13 +29,13 @@ export default {
         PhotoCard,
     },
     computed: {
-        ...mapState('gallery', [
+        ...mapState('session', [
             'session',
         ]),
     },
     methods: {
         takePhoto() {
-            this.$store.dispatch('gallery/takePhoto');
+            this.$store.dispatch('session/takePhoto');
         },
     },
 };

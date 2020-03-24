@@ -1,36 +1,18 @@
 <template lang="pug">
     .canvas-container(ref="canvasContainer")
         canvas(ref="canvas")
-        v-dialog(
-            v-model="loading"
-            hide-overlay
-            persistent
-            width="300"
-        )
-            v-card
-                v-card-text Please stand by
-                v-progress-circular.mb-0(indeterminate)
 </template>
 
 <script>
 import { throttle } from 'lodash';
+import { mapState, mapMutations, mapActions } from 'vuex';
 
-const { ipcRenderer: ipc } = require('electron-better-ipc');
-
-function rgbToHex(r, g, b) {
-    if (r > 255 || g > 255 || b > 255) {
-        throw new Error('Invalid color component');
-    }
-    // eslint-disable-next-line no-bitwise
-    return '#' + ('000000' + ((r << 16) | (g << 8) | b).toString(16)).slice(-6);
-}
+const { rgbToHex } = require('../lib/helpers');
 
 export default {
     name: 'EditorCanvas',
-    props: ['value', 'preset', 'name'],
     data() {
         return {
-            loading: true,
             scale: 1,
             processed: new Image(),
             orig: new Image(),
@@ -43,10 +25,32 @@ export default {
             throttledCanvasMove: throttle(this.canvasMove, 20),
         };
     },
+    computed: {
+        ...mapState('editor', [
+            'mode',
+            'preset',
+            'name',
+            'processedUrl',
+        ]),
+    },
     methods: {
+        ...mapMutations('editor', [
+            'addPresetGreenKey',
+            'setPresetGreenKeyColor',
+            'setMode',
+            'setLoadingDialog',
+            'setPresetPos',
+        ]),
+
+        ...mapActions('editor', [
+            'resetPos',
+            'reloadProcessed',
+            'deleteGreenKey',
+        ]),
+
         redraw() {
             this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
-            switch (this.value) {
+            switch (this.mode) {
             case 'chromakey':
                 this.ctx.fillStyle = 'white';
                 this.ctx.fillRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
@@ -124,7 +128,7 @@ export default {
             const x = e.clientX - this.ctx.rect.left;
             const y = e.clientY - this.ctx.rect.top;
 
-            switch (this.value) {
+            switch (this.mode) {
             case 'pos': {
                 const cropW = this.preset.crop.w || this.processed.width;
                 const cropH = this.preset.crop.h || this.processed.height;
@@ -139,12 +143,17 @@ export default {
                     && y > scaledPosY && y < scaledPosY + scaledPosH) {
                     this.moveStartX = x - scaledPosX;
                     this.moveStartY = y - scaledPosY;
+
+                    console.log('MoveStart', this.moveStartX, this.moveStartY);
                 }
                 break;
             }
-            case 'chromakey_selecting':
-                this.preset.greenKeys.unshift({ color: '', fuzz: 0 });
+            case 'chromakey_selecting': {
+                this.addPresetGreenKey();
+                const pixel = this.ctx.getImageData(x, y, 1, 1).data;
+                this.setPresetGreenKeyColor([0, rgbToHex(pixel[0], pixel[1], pixel[2])]);
                 break;
+            }
             default:
             }
         },
@@ -153,20 +162,19 @@ export default {
             const x = e.clientX - this.ctx.rect.left;
             const y = e.clientY - this.ctx.rect.top;
 
-            switch (this.value) {
+            switch (this.mode) {
             case 'pos':
                 if (this.moveStartX !== null && this.moveStartY !== null) {
-                    if (!('pos' in this.preset)) this.$set(this.preset, 'pos', { x: 0, y: 0 });
-
-                    this.$set(this.preset.pos, 'x', (x - this.moveStartX) / this.scale);
-                    this.$set(this.preset.pos, 'y', (y - this.moveStartY) / this.scale);
-
+                    this.setPresetPos({
+                        x: (x - this.moveStartX) / this.scale,
+                        y: (y - this.moveStartY) / this.scale,
+                    });
                     this.redraw();
                 }
                 break;
             case 'chromakey_selecting': {
                 const pixel = this.ctx.getImageData(x, y, 1, 1).data;
-                this.preset.greenKeys[0].color = rgbToHex(pixel[0], pixel[1], pixel[2]);
+                this.setPresetGreenKeyColor([0, rgbToHex(pixel[0], pixel[1], pixel[2])]);
                 break;
             }
             default:
@@ -176,35 +184,27 @@ export default {
             e.preventDefault();
             this.ctx.canvas.removeEventListener('mousemove', this.throttledCanvasMove);
 
-            switch (this.value) {
+            switch (this.mode) {
             case 'pos':
                 this.moveStartX = null;
                 this.moveStartY = null;
                 break;
             case 'chromakey_selecting':
                 this.$emit('change', 'chromakey');
-                this.reloadProcessedImage();
+                this.setMode('chromakey');
+                this.reloadProcessed();
                 break;
             default:
             }
         },
 
-        async reloadProcessedImage() {
-            this.loading = true;
-            this.processed.src = await ipc.callMain('process-photo', {
-                name: this.name,
-                tmp: true,
-                preset: this.preset,
-            }).catch(console.err);
-            this.processed.setAttribute('crossOrigin', '');
-            console.log(this.processed.src);
-        },
-
         checkLoading() {
-            this.loading = !(this.orig.complete
+            const loading = !(this.orig.complete
                             && this.processed.complete
+                            && this.processed.src
                             && this.bg.complete
                             && this.fg.complete);
+            this.setLoadingDialog(loading);
         },
     },
     watch: {
@@ -214,11 +214,15 @@ export default {
                 this.redraw();
             },
         },
-        value() {
+        mode() {
             this.redraw();
         },
+        processedUrl(newVal) {
+            this.processed.src = newVal;
+            this.processed.setAttribute('crossOrigin', '');
+        },
     },
-    async mounted() {
+    mounted() {
         const { canvas } = this.$refs;
         this.ctx = canvas.getContext('2d');
 
@@ -239,15 +243,15 @@ export default {
             this.checkLoading();
         }, false);
 
-        this.reloadProcessedImage();
+        this.reloadProcessed();
+        // this.processed.src = this.processedUrl;
         this.orig.src = `content://originals/${this.name}`;
-        this.orig.setAttribute('crossOrigin', '');
-
         this.fg.src = 'content://templates/fg.png';
-        this.fg.setAttribute('crossOrigin', '');
-
         this.bg.src = 'content://templates/bg.png';
+
+        this.orig.setAttribute('crossOrigin', '');
         this.bg.setAttribute('crossOrigin', '');
+        this.fg.setAttribute('crossOrigin', '');
 
         window.addEventListener('resize', this.resizeCanvas);
         canvas.addEventListener('touchstart', this.canvasMoveStart, false);
