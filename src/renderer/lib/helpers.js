@@ -9,12 +9,13 @@ function rgbToHex(r, g, b) {
 }
 
 function leadPreset(preset) {
-    if (preset === undefined) preset = {};
+    if (!preset) preset = {};
     else preset = cloneDeep(preset);
 
     if (!('greenKeys' in preset)) preset.greenKeys = [];
     if (!('crop' in preset)) preset.crop = {};
     if (!('pos' in preset)) preset.pos = {};
+    if (!('zoom' in preset)) preset.zoom = 0;
     if (!('erode' in preset)) preset.erode = 0;
     if (!('blur' in preset)) preset.blur = 0;
 

@@ -18,6 +18,8 @@
         "core-js": "^3.6.4",
         "cropperjs": "^1.5.6",
         "electron-better-ipc": "^0.8.0",
+        "escpos": "^3.0.0-alpha.3",
+        "escpos-usb": "^3.0.0-alpha.2",
         "imagemagick": "^0.1.3",
         "lodash": "^4.17.15",
         "node-wifi": "^2.0.12",

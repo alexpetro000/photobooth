@@ -36,12 +36,10 @@ ipc.answerRenderer('process-photo', async (options) => {
 
     if (!options.name) return false;
 
-    if (options.preset !== null) {
+    if (options.preset !== null || typeof options.preset === 'object') {
         let preset;
         if (options.preset) {
-            preset = typeof options.preset === 'string'
-                ? utils.preset.state[options.preset]
-                : options.preset;
+            preset = options.preset;
         } else {
             preset = utils.preset.state.default;
         }
@@ -85,6 +83,10 @@ ipc.answerRenderer('take-photo', async () => {
     return photo;
 });
 
+ipc.answerRenderer('save-preset', ({ name, preset }) => {
+    utils.session.state.find((p) => p.name === name).preset = preset;
+});
+
 ipc.answerRenderer('commit-session', () => {
     console.log('commit-session');
 
@@ -108,14 +110,16 @@ ipc.answerRenderer('delete-photo', (photo) => {
     fs.unlink(path.join(utils.photosDir, 'edited', photo.name + '.json'), logError);
     fs.unlink(path.join(utils.photosDir, 'tmp', photo.name + '.json'), logError);
     fs.unlink(path.join(utils.photosDir, 'tmp', photo.name + '.json'), logError);
-    utils.session.state = utils.session.state.filter((item) => item.name !== photo.name);
+    const newState = utils.session.state.filter((item) => item.name !== photo.name);
+    console.log('newState', newState);
+    utils.session.state = newState;
 });
 
-ipc.answerRenderer('save-preset', ({ name, preset }) => {
-    utils.preset.state[name] = preset;
+ipc.answerRenderer('save-default-preset', (preset) => {
+    utils.preset.state.default = preset;
 });
 
-ipc.answerRenderer('fetch-preset', (name) => utils.preset.state[name]);
+ipc.answerRenderer('fetch-default-preset', (name) => utils.preset.state[name]);
 
 ipc.answerRenderer('scan-wifi', () => wifi.scan());
 

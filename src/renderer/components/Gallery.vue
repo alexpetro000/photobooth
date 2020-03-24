@@ -9,7 +9,7 @@
                             v-icon(x-large) mdi-camera-plus
                     v-card-actions.pt-10(@click.stop @mousedown.stop @touchstart.stop)
                         v-spacer
-                        v-btn(x-large icon text)
+                        v-btn(x-large icon text @click="commitSession")
                             v-icon mdi-send
             v-col(
                 v-for="photo in session.slice().reverse()"
@@ -36,6 +36,9 @@ export default {
     methods: {
         takePhoto() {
             this.$store.dispatch('session/takePhoto');
+        },
+        commitSession() {
+            this.$store.dispatch('session/commitSession');
         },
     },
 };

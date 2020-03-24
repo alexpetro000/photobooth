@@ -40,6 +40,9 @@ export default {
             'setMode',
             'setLoadingDialog',
             'setPresetPos',
+            'assignPresetPos',
+            'setPresetCrop',
+            'assignPresetCrop',
         ]),
 
         ...mapActions('editor', [
@@ -84,8 +87,8 @@ export default {
                         * this.scale;
                     const scaledPosY = (this.preset.pos.y || (this.bg.height - cropH) / 2)
                         * this.scale;
-                    const scaledPosW = (this.preset.pos.w || cropW) * this.scale;
-                    const scaledPosH = (this.preset.pos.h || cropH) * this.scale;
+                    const scaledPosW = cropW * this.scale;
+                    const scaledPosH = cropH * this.scale;
 
                     this.ctx.drawImage(this.processed,
                         this.preset.crop.x || 0,
@@ -101,6 +104,21 @@ export default {
                 }
                 break;
             case 'crop':
+                if (this.orig.complete && this.orig.src) {
+                    this.ctx.drawImage(this.orig, 0, 0,
+                        this.orig.width, this.orig.height,
+                        (this.bg.width - this.orig.width) / 2,
+                        (this.bg.height - this.orig.height) / 2,
+                        this.orig.width * this.scale,
+                        this.orig.height * this.scale);
+                }
+                this.ctx.lineWidth = 3;
+                this.ctx.strokeRect(
+                    this.preset.crop.x * this.scale || 0,
+                    this.preset.crop.y * this.scale || 0,
+                    (this.preset.crop.w || this.orig.width) * this.scale,
+                    (this.preset.crop.h || this.orig.height) * this.scale,
+                );
                 break;
             default:
             }
@@ -136,8 +154,8 @@ export default {
                     * this.scale;
                 const scaledPosY = (this.preset.pos.y || (this.bg.height - cropH) / 2)
                     * this.scale;
-                const scaledPosW = (this.preset.pos.w || cropW) * this.scale;
-                const scaledPosH = (this.preset.pos.h || cropH) * this.scale;
+                const scaledPosW = cropW * this.scale;
+                const scaledPosH = cropH * this.scale;
 
                 if (x > scaledPosX && x < scaledPosX + scaledPosW
                     && y > scaledPosY && y < scaledPosY + scaledPosH) {
@@ -154,6 +172,10 @@ export default {
                 this.setPresetGreenKeyColor([0, rgbToHex(pixel[0], pixel[1], pixel[2])]);
                 break;
             }
+            case 'crop':
+                this.moveStartX = x;
+                this.moveStartY = y;
+                break;
             default:
             }
         },
@@ -165,7 +187,7 @@ export default {
             switch (this.mode) {
             case 'pos':
                 if (this.moveStartX !== null && this.moveStartY !== null) {
-                    this.setPresetPos({
+                    this.assignPresetPos({
                         x: (x - this.moveStartX) / this.scale,
                         y: (y - this.moveStartY) / this.scale,
                     });
@@ -177,6 +199,15 @@ export default {
                 this.setPresetGreenKeyColor([0, rgbToHex(pixel[0], pixel[1], pixel[2])]);
                 break;
             }
+            case 'crop':
+                this.setPresetCrop({
+                    x: this.moveStartX / this.scale,
+                    y: this.moveStartY / this.scale,
+                    w: (x - this.moveStartX) / this.scale,
+                    h: (y - this.moveStartY) / this.scale,
+                });
+                this.redraw();
+                break;
             default:
             }
         },
@@ -193,6 +224,10 @@ export default {
                 this.$emit('change', 'chromakey');
                 this.setMode('chromakey');
                 this.reloadProcessed();
+                break;
+            case 'crop':
+                this.moveStartX = null;
+                this.moveStartY = null;
                 break;
             default:
             }

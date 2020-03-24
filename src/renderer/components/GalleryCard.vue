@@ -1,15 +1,6 @@
 <template lang="pug">
     v-card
         v-img(:src="getUrl(photo)" @click="openEditor")
-        //v-card-actions
-            v-spacer
-            v-btn.mx-2(icon text @click="openEditor")
-                v-icon mdi-pencil
-            ConfirmButton(
-                icon="mdi-delete"
-                question="Delete photo?"
-                @confirmed="deletePhoto(photo)"
-            )
 </template>
 
 <script>

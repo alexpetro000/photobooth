@@ -1,6 +1,7 @@
+import { merge, cloneDeep } from 'lodash';
+
 const { ipcRenderer: ipc } = require('electron-better-ipc');
 const { leadPreset } = require('../../lib/helpers');
-
 
 export default {
     namespaced: true,
@@ -12,6 +13,8 @@ export default {
         saveDialog: false,
         loadingDialog: true,
         processedUrl: 'undefined',
+
+        defaultPreset: undefined,
     },
     // getters: {
     //     photo(state, getters, rootState, rootGetters) {
@@ -33,6 +36,18 @@ export default {
 
         setPresetPos(state, pos) {
             state.preset.pos = pos;
+        },
+
+        assignPresetPos(state, pos) {
+            state.preset.pos = { ...state.preset.pos, ...pos };
+        },
+
+        setPresetCrop(state, crop) {
+            state.preset.crop = crop;
+        },
+
+        assignPresetCrop(state, crop) {
+            state.preset.crop = { ...state.preset.crop, ...crop };
         },
 
         addPresetGreenKey(state, greenKey) {
@@ -76,21 +91,27 @@ export default {
             state.saveDialog = !!value;
         },
 
+        setDefaultPreset(state, preset) {
+            state.defaultPreset = leadPreset(preset);
+        },
+
         // unused
         // setPresets(state, presets) {
         //     state.presets = presets;
         // },
     },
     actions: {
-        init({ commit, dispatch, rootGetters }, name) {
+        init({
+            commit, dispatch, rootGetters, state,
+        }, name) {
             const photo = rootGetters['session/getPhoto'](name);
             if (!photo) {
                 return;
             }
             const s = {};
             s.name = name;
-            s.originalPreset = leadPreset(photo.preset);
-            s.preset = leadPreset(photo.preset);
+            s.preset = merge(leadPreset(state.defaultPreset), leadPreset(photo.preset));
+            s.originalPreset = cloneDeep(s.preset);
             s.mode = undefined;
             s.saveDialog = false;
             s.loadingDialog = true;
@@ -103,13 +124,21 @@ export default {
             commit('setPresetPos', {});
         },
 
+        resetCrop({ commit }) {
+            commit('setPresetCrop', {});
+        },
+
         async reloadProcessed({ commit, state }) {
             commit('setLoadingDialog', true);
             console.log('name', state.name);
             console.log('preset', state.preset);
             const url = await ipc.callMain('process-photo', {
                 name: state.name,
-                preset: state.preset,
+                preset: {
+                    greenKeys: state.preset.greenKeys,
+                    blur: state.preset.blur,
+                    erode: state.preset.erode,
+                },
                 tmp: true,
             }).catch(console.err);
             console.log('URL', url);
@@ -121,20 +150,27 @@ export default {
             dispatch('reloadProcessed');
         },
 
-        savePreset({ commit }, preset) {
-            commit('session/setPhotoPreset', preset, { root: true });
+        async savePreset({ commit, dispatch, state }) {
+            const obj = { name: state.name, preset: state.preset };
+            await ipc.callMain('save-preset', obj);
+            commit('session/setPhotoPreset', obj, { root: true });
+            dispatch('session/processPhoto', obj, { root: true });
         },
 
+        saveCurrentPresetAsDefault({ commit, state }) {
+            commit('setDefaultPreset', state.preset);
+            ipc.callMain('save-default-preset', state.preset).catch(console.error);
+        },
 
         // unused
-        // fetchAll: {
-        //     root: true,
-        //     handler({ dispatch }) {
-        //         dispatch('fetchPresets');
-        //     },
-        // },
-        // async fetchPresets({ commit }) {
-        //     commit('setPresets', await ipc.callMain('fetch-session'));
-        // },
+        fetchAll: {
+            root: true,
+            handler({ dispatch }) {
+                dispatch('fetchDefaultPreset');
+            },
+        },
+        async fetchDefaultPreset({ commit }) {
+            commit('setDefaultPreset', await ipc.callMain('fetch-default-preset'));
+        },
     },
 };

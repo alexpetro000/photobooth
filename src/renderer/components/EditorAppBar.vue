@@ -28,6 +28,7 @@ export default {
     computed: {
         ...mapState('editor', [
             'name',
+            'preset',
             'originalPreset',
         ]),
         saveDialog: {
@@ -46,14 +47,15 @@ export default {
         goBack(save) {
             this.saveDialog = false;
             if (save) {
-                this.$store.dispatch('editor/savePreset', { name: this.name, preset: this.preset });
+                this.$store.dispatch('editor/savePreset');
             }
             this.$router.go(-1);
         },
 
         deletePhoto() {
-            this.$store.dispatch('session/deletePhoto', { name: this.name });
-            this.$router.go(-1);
+            this.$store.dispatch('session/deletePhoto', { name: this.name }).then(() => {
+                this.$router.go(-1);
+            });
         },
     },
 };

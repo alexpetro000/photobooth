@@ -41,12 +41,21 @@
                         @end="reloadProcessed"
                         max="20" thumb-label height="1em")
             v-tab-item
+                //v-card
+                    v-card-title Zoom
+                    v-slider.mx-3(
+                        @input=""
+                        min="-400"
+                        max="400" thumb-label height="1em")
                 v-card.mb-1
                     v-btn(block text @click="resetPos") Reset position
+            v-tab-item
+                v-card.mb-1
+                    v-btn(block text @click="resetCrop") Reset crop
 
         template(v-slot:append)
             div.pa-2
-            v-btn(block) Save as default
+            v-btn(block @click="saveCurrentPresetAsDefault") Save as default
 </template>
 
 <script>
@@ -80,8 +89,10 @@ export default {
 
         ...mapActions('editor', [
             'resetPos',
+            'resetCrop',
             'reloadProcessed',
             'deleteGreenKey',
+            'saveCurrentPresetAsDefault',
         ]),
 
         onAddGreenKeyClicked() {

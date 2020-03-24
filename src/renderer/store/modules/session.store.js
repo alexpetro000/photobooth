@@ -40,8 +40,6 @@ export default {
         },
 
         setPhotoPreset(state, { name, preset }) {
-            // console.log('savePreset', name, JSON.stringify(preset));
-
             Vue.set(state.session.find((p) => p.name === name), 'preset', preset);
         },
 
@@ -65,25 +63,21 @@ export default {
         fetchAll: {
             root: true,
             handler({ dispatch }) {
-                dispatch('fetch');
+                dispatch('fetchSession');
             },
         },
 
-        async fetch({ dispatch, commit }) {
+        async fetchSession({ dispatch, commit }) {
             const session = await ipc.callMain('fetch-session');
             commit('setSession', session);
-            session.forEach((photo) => {
-                (async () => {
-                    commit('setPhotoUrl', {
-                        photo,
-                        url: await dispatch('processPhoto', photo),
-                    });
-                })();
-            });
+            session.forEach((photo) => dispatch('processPhoto', photo));
         },
 
-        async processPhoto(_, photo) {
-            return ipc.callMain('process-photo', photo).catch(console.err);
+        async processPhoto({ commit }, photo) {
+            commit('setPhotoUrl', {
+                photo,
+                url: await ipc.callMain('process-photo', photo).catch(console.err),
+            });
         },
 
         deletePhoto({ commit }, photo) {
@@ -100,16 +94,14 @@ export default {
             try {
                 const photo = await ipc.callMain('take-photo');
                 commit('addPhoto', photo);
-                const url = await dispatch('processPhoto', photo);
-                commit('setPhotoUrl', {
-                    photo,
-                    url,
-                });
+                await dispatch('processPhoto', photo);
 
+                console.log('setTimeout');
                 if (state.preview) {
                     commit('setPreview', photo);
                     clearTimeout(previewTimeoutId);
                     previewTimeoutId = setTimeout(() => {
+                        console.log('timeout');
                         if (state.preview === photo) commit('setPreview', false);
                     }, rootState.config.previewTime);
                 }
@@ -117,6 +109,11 @@ export default {
                 console.error(e);
                 commit('setPreview', false);
             }
+        },
+
+        async commitSession({ dispatch }) {
+            await ipc.callMain('commit-session');
+            dispatch('fetchSession');
         },
     },
 };
