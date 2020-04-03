@@ -22,6 +22,8 @@ protocol.registerSchemesAsPrivileged([{
 function createWindow() {
     // Create the browser window.
     win = new BrowserWindow({
+        width: utils.config.state.window.width,
+        height: utils.config.state.window.height,
         kiosk: utils.config.state.window.kiosk,
         fullscreen: utils.config.state.window.fullscreen,
         webPreferences: {
