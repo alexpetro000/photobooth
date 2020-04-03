@@ -8,6 +8,10 @@
             v-toolbar.toolbar(dense)
                 v-btn(text icon @click="close")
                     v-icon mdi-close
+                v-spacer
+                ConfirmButton(icon="mdi-delete" question="Delete photo?" @confirmed="deletePhoto")
+                v-btn(text icon @click="openEditor")
+                    v-icon mdi-image-edit
             div.image-container
                 img.image(
                     v-if="preview !== true"
@@ -25,9 +29,11 @@
 
 <script>
 import { mapGetters, mapState } from 'vuex';
+import ConfirmButton from './ConfirmButton';
 
 export default {
     name: 'GalleryPreview',
+    components: { ConfirmButton },
     computed: {
         ...mapState('session', [
             'preview',
@@ -39,6 +45,13 @@ export default {
     methods: {
         close() {
             this.$store.commit('session/setPreview', false);
+        },
+        deletePhoto() {
+            this.$store.dispatch('session/deletePhoto', this.preview);
+            this.close();
+        },
+        openEditor() {
+            this.$router.push(`/edit/${this.preview.name}`);
         },
     },
 };
