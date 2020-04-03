@@ -12,12 +12,14 @@ function leadPreset(preset) {
     if (!preset) preset = {};
     else preset = cloneDeep(preset);
 
-    if (!('greenKeys' in preset)) preset.greenKeys = [];
+    if (!('chromakey' in preset)) preset.chromakey = {};
+    if (!('points' in preset.chromakey)) preset.chromakey.points = [];
+    if (!('shift' in preset.chromakey)) preset.chromakey.shift = 0;
+    if (!('smooth' in preset.chromakey)) preset.chromakey.smooth = 0;
+
+
     if (!('crop' in preset)) preset.crop = {};
     if (!('pos' in preset)) preset.pos = {};
-    if (!('zoom' in preset)) preset.zoom = 0;
-    if (!('erode' in preset)) preset.erode = 0;
-    if (!('blur' in preset)) preset.blur = 0;
 
     return preset;
 }

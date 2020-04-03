@@ -1,10 +1,9 @@
 <template lang="pug">
-    v-app()
+    v-content
         EditorLoadingDialog
         EditorAppBar
         EditorTools(v-if="preset")
-        v-content()
-            EditorCanvas(v-if="preset")
+        EditorCanvas(v-if="preset")
 </template>
 
 <script>
@@ -39,8 +38,18 @@ export default {
     },
     watch: {
         photo() {
-            this.$store.dispatch('editor/init', this.name);
+            if (!this.preset) this.$store.dispatch('editor/init', this.name);
         },
     },
 };
 </script>
+
+<style scoped>
+    .root{
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        right: 0;
+    }
+</style>

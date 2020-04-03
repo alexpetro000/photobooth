@@ -14,10 +14,14 @@ export default new Vuex.Store({
     },
     state: {
         config: undefined,
+        msg: '',
     },
     mutations: {
         setConfig(state, config) {
             state.config = config;
+        },
+        setMsg(state, msg) {
+            state.msg = msg;
         },
     },
     actions: {

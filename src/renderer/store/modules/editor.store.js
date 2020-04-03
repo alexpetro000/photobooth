@@ -1,7 +1,7 @@
 import { merge, cloneDeep } from 'lodash';
 
 const { ipcRenderer: ipc } = require('electron-better-ipc');
-const { leadPreset } = require('../../lib/helpers');
+const { leadPreset, arePresetsEqual } = require('../../lib/helpers');
 
 export default {
     namespaced: true,
@@ -16,14 +16,22 @@ export default {
 
         defaultPreset: undefined,
     },
-    // getters: {
-    //     photo(state, getters, rootState, rootGetters) {
-    //         return rootGetters['session/getPhoto'](state.name);
-    //     },
-    // },
+    getters: {
+        photo(state, getters, rootState, rootGetters) {
+            return rootGetters['session/getPhoto'](state.name);
+        },
+    },
     mutations: {
         initState(state, newState) {
             Object.assign(state, newState);
+        },
+
+        setName(state, name) {
+            state.name = name;
+        },
+
+        setPreset(state, preset) {
+            state.preset = preset;
         },
 
         setMode(state, mode) {
@@ -50,42 +58,33 @@ export default {
             state.preset.crop = { ...state.preset.crop, ...crop };
         },
 
-        addPresetGreenKey(state, greenKey) {
-            state.preset.greenKeys.unshift(greenKey || { color: '', fuzz: 0 });
+        addPresetChromakeyPoint(state, greenKey) {
+            state.preset.chromakey.points.unshift(greenKey || { color: '', fuzz: 0 });
         },
 
-        deleteGreenKey(state, i) {
-            state.preset.greenKeys.splice(i, 1);
+        deleteChromakeyPoint(state, i) {
+            state.preset.chromakey.points.splice(i, 1);
         },
 
-        setPresetGreenKeyFuzz(state, [i, val]) {
-            state.preset.greenKeys[i].fuzz = val;
+        setPresetChromakeyPointFuzz(state, [i, val]) {
+            state.preset.chromakey.points[i].fuzz = val;
         },
 
-        setPresetGreenKeyColor(state, [i, val]) {
-            state.preset.greenKeys[i].color = val;
+        setPresetChromakeyPointColor(state, [i, val]) {
+            state.preset.chromakey.points[i].color = val;
         },
 
-        setPresetErode(state, val) {
-            state.preset.erode = val;
+        setPresetChromakeyShift(state, val) {
+            state.preset.chromakey.shift = val;
         },
 
-        setPresetBlur(state, val) {
-            state.preset.blur = val;
+        setPresetChromakeySmooth(state, val) {
+            state.preset.chromakey.smooth = val;
         },
 
         setProcessedUrl(state, url) {
             state.processedUrl = url;
         },
-
-        // setPresetProp(state, { prop, val }) {
-        //     const propArr = prop.split('.');
-        //     const lastObj = propArr.slice(0, propArr.length - 1).reduce((obj, p) => {
-        //         if (!(p in obj)) Vue.$set(obj, p, {});
-        //         return obj[p];
-        //     }, state.preset);
-        //     Vue.$set(lastObj, propArr[propArr.length - 1], val);
-        // },
 
         setSaveDialog(state, value) {
             state.saveDialog = !!value;
@@ -94,22 +93,17 @@ export default {
         setDefaultPreset(state, preset) {
             state.defaultPreset = leadPreset(preset);
         },
-
-        // unused
-        // setPresets(state, presets) {
-        //     state.presets = presets;
-        // },
     },
     actions: {
         init({
-            commit, dispatch, rootGetters, state,
+            commit, dispatch, getters, state,
         }, name) {
-            const photo = rootGetters['session/getPhoto'](name);
+            commit('setName', name);
+            const { photo } = getters;
             if (!photo) {
                 return;
             }
             const s = {};
-            s.name = name;
             s.preset = merge(leadPreset(state.defaultPreset), leadPreset(photo.preset));
             s.originalPreset = cloneDeep(s.preset);
             s.mode = undefined;
@@ -134,41 +128,60 @@ export default {
             console.log('preset', state.preset);
             const url = await ipc.callMain('process-photo', {
                 name: state.name,
-                preset: {
-                    greenKeys: state.preset.greenKeys,
-                    blur: state.preset.blur,
-                    erode: state.preset.erode,
-                },
+                preset: { chromakey: state.preset.chromakey },
                 tmp: true,
             }).catch(console.err);
             console.log('URL', url);
             if (url) commit('setProcessedUrl', url);
         },
 
-        deleteGreenKey({ commit, dispatch }, i) {
-            commit('deleteGreenKey', i);
+        deleteChromakeyPoint({ commit, dispatch }, i) {
+            commit('deleteChromakeyPoint', i);
             dispatch('reloadProcessed');
         },
 
-        async savePreset({ commit, dispatch, state }) {
-            const obj = { name: state.name, preset: state.preset };
+        async saveForPhoto({ commit, dispatch, state }) {
+            const obj = { name: state.name, preset: undefined };
+
+            if (!arePresetsEqual(state.defaultPreset, state.preset)) {
+                obj.preset = state.preset;
+            }
+
             await ipc.callMain('save-preset', obj);
             commit('session/setPhotoPreset', obj, { root: true });
-            dispatch('session/processPhoto', obj, { root: true });
+            dispatch('session/processPhoto', obj, { root: true })
+                .then(() => commit('setMsg', 'Saved!', { root: true }));
         },
 
-        saveCurrentPresetAsDefault({ commit, state }) {
+        async saveAsDefault({ commit, dispatch, state }) {
             commit('setDefaultPreset', state.preset);
-            ipc.callMain('save-default-preset', state.preset).catch(console.error);
+            await ipc.callMain('save-default-preset', state.preset).catch(console.error)
+                .then(() => commit('setMsg', 'Saved!', { root: true }));
+
+            const obj = { name: state.name, preset: undefined };
+            await ipc.callMain('save-preset', obj);
+            // commit('session/setPhotoPreset', obj, { root: true });
+            // dispatch('session/processPhoto', obj, { root: true });
+            dispatch('session/fetchSession', null, { root: true });
         },
 
-        // unused
+        revertChanges({ commit, state, dispatch }) {
+            commit('setPreset', cloneDeep(state.originalPreset));
+            dispatch('reloadProcessed');
+        },
+
+        applyDefaultPreset({ commit, state, dispatch }) {
+            commit('setPreset', leadPreset(state.defaultPreset));
+            dispatch('reloadProcessed');
+        },
+
         fetchAll: {
             root: true,
             handler({ dispatch }) {
                 dispatch('fetchDefaultPreset');
             },
         },
+
         async fetchDefaultPreset({ commit }) {
             commit('setDefaultPreset', await ipc.callMain('fetch-default-preset'));
         },

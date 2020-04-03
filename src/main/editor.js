@@ -17,32 +17,50 @@ function imConvert(args) {
 async function process(input, preset, output) {
     console.log('processing:', preset);
     const args = [input];
-    /* if ('crop' in preset) {
+    if ('crop' in preset) {
         const { crop } = preset;
-        args.push('-crop', `${crop.w}x${crop.h}+${crop.x}+${crop.y}`, '+repage');
-    } */
-    if ('greenKeys' in preset) {
+        let cropParams = '';
+        if (crop.w) cropParams += Math.round(crop.w);
+        cropParams += 'x';
+        if (crop.h) cropParams += Math.round(crop.h);
+        cropParams += `+${Math.round(crop.x) || 0}+${Math.round(crop.y) || 0}`;
+
+        args.push('-crop', cropParams, '+repage');
+    }
+    if ('chromakey' in preset) {
         args.push('(', '-clone', '0');
-        preset.greenKeys.forEach(({ color, fuzz }) => {
-            args.push('-fuzz', fuzz + '%', '-transparent', color);
-        });
-        args.push('-alpha', 'extract');
-        if ('erode' in preset) args.push('-morphology', 'Erode', `Octagon:${preset.erode}`);
-        if ('blur' in preset) args.push('-blur', `${preset.blur}x${preset.blur}`);
+        if ('points' in preset.chromakey) {
+            preset.chromakey.points.forEach(({ color, fuzz }) => {
+                args.push('-fuzz', fuzz + '%', '-transparent', color);
+            });
+            args.push('-alpha', 'extract');
+        }
+        if ('shift' in preset.chromakey) {
+            args.push('-morphology', 'Erode', `Octagon:${preset.chromakey.shift}`);
+        }
+        if ('smooth' in preset.chromakey) {
+            args.push('-blur', `${preset.chromakey.smooth}x${preset.chromakey.smooth}`);
+        }
+
         args.push(')', '-compose', 'CopyOpacity', '-composite');
     }
 
     if ('pos' in preset) {
+        if ('scale' in preset.pos) {
+            const scale = Math.round((preset.pos.scale || 1) * 100);
+            args.push('-resize', `${scale}%`);
+        }
+
         const templates = path.join(utils.photosDir, 'templates');
-        const bg = path.join(templates, 'bg.png');
+        const bg = path.join(templates, 'bg.jpg');
         const fg = path.join(templates, 'fg.png');
 
-        const posX = Math.floor(preset.pos.x); // || (canvas.width - cropW) / 2);
-        const posY = Math.floor(preset.pos.y); // || (canvas.height - cropH) / 2);
+        const posX = Math.round(preset.pos.x) || 0;
+        const posY = Math.round(preset.pos.y) || 0;
 
         args.unshift(bg, '(');
         args.push(')', '-geometry',
-            `${posX >= 0 ? '+' : '-'}${posX}${posY >= 0 ? '+' : '-'}${posY}`,
+            `+${posX}+${posY}`,
             '-compose', 'Over', '-composite');
 
         args.push(fg, '-geometry', '+0+0', '-compose', 'Over', '-composite');

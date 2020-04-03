@@ -22,15 +22,6 @@
                 v-card-actions
                     v-btn(@click="connect") Connect
             SimpleKeyboard(@onChange="keyboardChange" :input="password")
-
-        v-snackbar(
-            :value="snackbar"
-            bottom left
-            :timeout="2000"
-        )
-            |{{ snackbar }}
-            v-btn(text icon @click="snackbar = false")
-                v-icon mdi-close
     </template>
 
 <script>
@@ -56,12 +47,7 @@ export default {
 
         currentWifi: {},
         nets: [],
-
-        snackbar: false,
     }),
-    computed: {
-
-    },
     methods: {
         getWifiIcon(quality) {
             if (!quality) return 'mdi-wifi-off';
@@ -79,10 +65,10 @@ export default {
             ipc.callMain('connect-wifi', { ssid: this.connectCandidate, password: this.password })
                 .catch((err) => {
                     console.log(err);
-                    this.snackbar = 'connection failed';
+                    this.showMsg('connection failed');
                 })
                 .then(() => {
-                    this.snackbar = 'connected!';
+                    this.showMsg('connected!');
                 });
             this.passwordDialog = false;
         },
@@ -95,6 +81,9 @@ export default {
 
         async updateCurrent() {
             [this.currentWifi] = await ipc.callMain('get-current-wifi');
+            if (this.currentWifi === undefined) {
+                this.currentWifi = {};
+            }
         },
 
         async rescan() {
@@ -103,6 +92,10 @@ export default {
 
         keyboardChange(input) {
             this.password = input;
+        },
+
+        showMsg(msg) {
+            this.$store.commit('setMsg', msg);
         },
     },
     watch: {
@@ -121,7 +114,7 @@ export default {
     mounted() {
         updateCurrentIntervalId = setInterval(() => {
             this.updateCurrent();
-        }, 5000);
+        }, 10000);
         this.updateCurrent();
     },
     beforeDestroy() {

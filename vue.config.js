@@ -18,6 +18,14 @@ module.exports = {
                 config.resolve.alias
                     .set('@', path.resolve(__dirname, './src/renderer'));
             },
+            builderOptions: {
+                linux: {
+                    target: {
+                        target: 'AppImage',
+                        arch: ['armv7l', 'x64'],
+                    },
+                },
+            },
         },
     },
     lintOnSave: false,

@@ -2,6 +2,7 @@ import { app, BrowserWindow, protocol } from 'electron';
 import { createProtocol, installVueDevtools } from 'vue-cli-plugin-electron-builder/lib';
 
 require('./booth');
+const utils = require('./utils');
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
 
@@ -21,7 +22,8 @@ protocol.registerSchemesAsPrivileged([{
 function createWindow() {
     // Create the browser window.
     win = new BrowserWindow({
-        fullscreen: true,
+        kiosk: utils.config.state.window.kiosk,
+        fullscreen: utils.config.state.window.fullscreen,
         webPreferences: {
             nodeIntegration: true,
         },
@@ -32,6 +34,7 @@ function createWindow() {
         win.loadURL(process.env.WEBPACK_DEV_SERVER_URL);
         if (!process.env.IS_TEST) win.webContents.openDevTools();
     } else {
+        if (!utils.config.state.window.showMenu) win.removeMenu();
         createProtocol('app');
         // Load the index.html when not in development
         win.loadURL('app://./index.html');

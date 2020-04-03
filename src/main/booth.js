@@ -26,8 +26,6 @@ app.on('ready', () => {
     protocol.registerFileProtocol(protocolName, (request, callback) => {
         const url = request.url.substr(protocolName.length + 3).split('?')[0];
         callback({ path: path.join(utils.photosDir, url) });
-    }, (error) => {
-        if (error) console.error('Failed to register protocol');
     });
 });
 
@@ -37,25 +35,21 @@ ipc.answerRenderer('process-photo', async (options) => {
     if (!options.name) return false;
 
     if (options.preset !== null || typeof options.preset === 'object') {
-        let preset;
-        if (options.preset) {
-            preset = options.preset;
-        } else {
-            preset = utils.preset.state.default;
-        }
+        const preset = options.preset || utils.preset.state.default;
         const edited = path.join(utils.photosDir, options.tmp ? 'tmp' : 'edited', options.name);
+        const extension = options.tmp ? '.png' : '.jpg';
 
-        const existingPreset = await fsPromises.access(edited + '.png')
+        const existingPreset = await fsPromises.access(edited + extension)
             .then(() => fsPromises.readFile(edited + '.json'))
             .then((buf) => JSON.parse(buf.toString()))
             .catch(() => null);
 
         if (!isEqual(preset, existingPreset)) {
             const input = path.join(utils.photosDir, 'originals', options.name);
-            await editor.process(input, preset, edited + '.png');
+            await editor.process(input, preset, edited + extension);
             fs.writeFileSync(edited + '.json', JSON.stringify(preset));
         }
-        return `${protocolName}://${options.tmp ? 'tmp' : 'edited'}/${options.name}.png?t=${Date.now()}`;
+        return `${protocolName}://${options.tmp ? 'tmp' : 'edited'}/${options.name}${extension}?t=${Date.now()}`;
         // base64 = await image2base64(file);
         // fs.unlink(file, (err) => { if (err) console.error(err); });
     } else {
@@ -106,9 +100,9 @@ ipc.answerRenderer('delete-photo', (photo) => {
         if (e) console.error(e);
     }
     fs.unlink(path.join(utils.photosDir, 'originals', photo.name), logError);
-    fs.unlink(path.join(utils.photosDir, 'edited', photo.name + '.png'), logError);
+    fs.unlink(path.join(utils.photosDir, 'edited', photo.name + '.jpg'), logError);
     fs.unlink(path.join(utils.photosDir, 'edited', photo.name + '.json'), logError);
-    fs.unlink(path.join(utils.photosDir, 'tmp', photo.name + '.json'), logError);
+    fs.unlink(path.join(utils.photosDir, 'tmp', photo.name + '.png'), logError);
     fs.unlink(path.join(utils.photosDir, 'tmp', photo.name + '.json'), logError);
     const newState = utils.session.state.filter((item) => item.name !== photo.name);
     console.log('newState', newState);
@@ -119,10 +113,8 @@ ipc.answerRenderer('save-default-preset', (preset) => {
     utils.preset.state.default = preset;
 });
 
-ipc.answerRenderer('fetch-default-preset', (name) => utils.preset.state[name]);
+ipc.answerRenderer('fetch-default-preset', async () => utils.preset.clone().default);
 
 ipc.answerRenderer('scan-wifi', () => wifi.scan());
-
 ipc.answerRenderer('get-current-wifi', () => wifi.getCurrentConnections());
-
 ipc.answerRenderer('connect-wifi', ({ ssid, password }) => wifi.connect({ ssid, password }));

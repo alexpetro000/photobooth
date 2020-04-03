@@ -1,9 +1,8 @@
 <template lang="pug">
-    v-app
+    v-content
         SystemBar
         GalleryPreview
-        v-content
-            Gallery
+        Gallery
 </template>
 
 <script>

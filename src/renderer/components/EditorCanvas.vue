@@ -35,8 +35,8 @@ export default {
     },
     methods: {
         ...mapMutations('editor', [
-            'addPresetGreenKey',
-            'setPresetGreenKeyColor',
+            'addPresetChromakeyPoint',
+            'setPresetChromakeyPointColor',
             'setMode',
             'setLoadingDialog',
             'setPresetPos',
@@ -48,15 +48,13 @@ export default {
         ...mapActions('editor', [
             'resetPos',
             'reloadProcessed',
-            'deleteGreenKey',
+            'deleteChromakeyPoint',
         ]),
 
         redraw() {
             this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
             switch (this.mode) {
             case 'chromakey':
-                this.ctx.fillStyle = 'white';
-                this.ctx.fillRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
                 this.ctx.drawImage(this.processed, 0, 0,
                     this.processed.width, this.processed.height,
                     (this.bg.width - this.processed.width) / 2,
@@ -87,8 +85,8 @@ export default {
                         * this.scale;
                     const scaledPosY = (this.preset.pos.y || (this.bg.height - cropH) / 2)
                         * this.scale;
-                    const scaledPosW = cropW * this.scale;
-                    const scaledPosH = cropH * this.scale;
+                    const scaledPosW = cropW * this.scale * (this.preset.pos.scale || 1);
+                    const scaledPosH = cropH * this.scale * (this.preset.pos.scale || 1);
 
                     this.ctx.drawImage(this.processed,
                         this.preset.crop.x || 0,
@@ -140,12 +138,23 @@ export default {
 
             this.redraw();
         },
-        canvasMoveStart(e) {
+        canvasMouseDown(e) {
             e.preventDefault();
-            this.ctx.canvas.addEventListener('mousemove', this.throttledCanvasMove, false);
-            const x = e.clientX - this.ctx.rect.left;
-            const y = e.clientY - this.ctx.rect.top;
-
+            window.addEventListener('mousemove', this.canvasMouseMove, false);
+            this.handleMoveStart(
+                e.clientX - this.ctx.rect.left,
+                e.clientY - this.ctx.rect.top,
+            );
+        },
+        canvasTouchStart(e) {
+            e.preventDefault();
+            window.addEventListener('touchmove', this.canvasTouchMove, { passive: false });
+            this.handleMoveStart(
+                e.changedTouches[0].clientX - this.ctx.rect.left,
+                e.changedTouches[0].clientY - this.ctx.rect.top,
+            );
+        },
+        handleMoveStart(x, y) {
             switch (this.mode) {
             case 'pos': {
                 const cropW = this.preset.crop.w || this.processed.width;
@@ -154,22 +163,22 @@ export default {
                     * this.scale;
                 const scaledPosY = (this.preset.pos.y || (this.bg.height - cropH) / 2)
                     * this.scale;
-                const scaledPosW = cropW * this.scale;
-                const scaledPosH = cropH * this.scale;
+                const scaledPosW = cropW * this.scale * (this.preset.pos.scale || 1);
+                const scaledPosH = cropH * this.scale * (this.preset.pos.scale || 1);
+                // const scaledPosW = cropW * this.scale;
+                // const scaledPosH = cropH * this.scale;
 
                 if (x > scaledPosX && x < scaledPosX + scaledPosW
                     && y > scaledPosY && y < scaledPosY + scaledPosH) {
                     this.moveStartX = x - scaledPosX;
                     this.moveStartY = y - scaledPosY;
-
-                    console.log('MoveStart', this.moveStartX, this.moveStartY);
                 }
                 break;
             }
             case 'chromakey_selecting': {
-                this.addPresetGreenKey();
+                this.addPresetChromakeyPoint();
                 const pixel = this.ctx.getImageData(x, y, 1, 1).data;
-                this.setPresetGreenKeyColor([0, rgbToHex(pixel[0], pixel[1], pixel[2])]);
+                this.setPresetChromakeyPointColor([0, rgbToHex(pixel[0], pixel[1], pixel[2])]);
                 break;
             }
             case 'crop':
@@ -179,10 +188,26 @@ export default {
             default:
             }
         },
-        canvasMove(e) {
+
+        canvasMouseMove(e) {
             e.preventDefault();
-            const x = e.clientX - this.ctx.rect.left;
-            const y = e.clientY - this.ctx.rect.top;
+            this.throttledCanvasMove(
+                e.clientX - this.ctx.rect.left,
+                e.clientY - this.ctx.rect.top,
+            );
+        },
+        canvasTouchMove(e) {
+            e.preventDefault();
+            this.throttledCanvasMove(
+                e.changedTouches[0].clientX - this.ctx.rect.left,
+                e.changedTouches[0].clientY - this.ctx.rect.top,
+            );
+        },
+        canvasMove(x, y) {
+            if (x > this.ctx.canvas.width) x = this.ctx.canvas.width;
+            if (y > this.ctx.canvas.height) y = this.ctx.canvas.height;
+            if (x < 0) x = 0;
+            if (y < 0) y = 0;
 
             switch (this.mode) {
             case 'pos':
@@ -196,7 +221,7 @@ export default {
                 break;
             case 'chromakey_selecting': {
                 const pixel = this.ctx.getImageData(x, y, 1, 1).data;
-                this.setPresetGreenKeyColor([0, rgbToHex(pixel[0], pixel[1], pixel[2])]);
+                this.setPresetChromakeyPointColor([0, rgbToHex(pixel[0], pixel[1], pixel[2])]);
                 break;
             }
             case 'crop':
@@ -209,11 +234,14 @@ export default {
                 this.redraw();
                 break;
             default:
+                break;
             }
         },
-        canvasMoveEnd(e) {
-            e.preventDefault();
-            this.ctx.canvas.removeEventListener('mousemove', this.throttledCanvasMove);
+        canvasMoveEnd() {
+            // e.preventDefault();
+            // this.ctx.canvas.removeEventListener('mousemove', this.throttledCanvasMove);
+            window.removeEventListener('mousemove', this.canvasMouseMove);
+            window.removeEventListener('touchmove', this.canvasTouchMove);
 
             switch (this.mode) {
             case 'pos':
@@ -232,6 +260,7 @@ export default {
             default:
             }
         },
+
 
         checkLoading() {
             const loading = !(this.orig.complete
@@ -282,22 +311,23 @@ export default {
         // this.processed.src = this.processedUrl;
         this.orig.src = `content://originals/${this.name}`;
         this.fg.src = 'content://templates/fg.png';
-        this.bg.src = 'content://templates/bg.png';
+        this.bg.src = 'content://templates/bg.jpg';
 
         this.orig.setAttribute('crossOrigin', '');
         this.bg.setAttribute('crossOrigin', '');
         this.fg.setAttribute('crossOrigin', '');
 
         window.addEventListener('resize', this.resizeCanvas);
-        canvas.addEventListener('touchstart', this.canvasMoveStart, false);
-        canvas.addEventListener('touchend', this.canvasMoveEnd, false);
-        canvas.addEventListener('touchmove', this.throttledCanvasMove, false);
+        canvas.addEventListener('touchstart', this.canvasTouchStart, { passive: false });
+        canvas.addEventListener('mousedown', this.canvasMouseDown, false);
 
-        canvas.addEventListener('mousedown', this.canvasMoveStart, false);
-        canvas.addEventListener('mouseup', this.canvasMoveEnd, false);
+        window.addEventListener('touchend', this.canvasMoveEnd, { passive: false });
+        window.addEventListener('mouseup', this.canvasMoveEnd, false);
     },
     beforeDestroy() {
         window.removeEventListener('resize', this.resizeCanvas);
+        window.removeEventListener('touchend', this.canvasMoveEnd);
+        window.removeEventListener('mouseup', this.canvasMoveEnd);
     },
 };
 </script>
@@ -309,5 +339,9 @@ export default {
         bottom: 0;
         left: 0;
         right: 0;
+    }
+    canvas {
+        background-image: url(../assets/checkerboard.jpg);
+        background-color: transparent;
     }
 </style>
