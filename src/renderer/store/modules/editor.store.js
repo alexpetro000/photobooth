@@ -110,7 +110,6 @@ export default {
             s.saveDialog = false;
             s.loadingDialog = true;
             commit('initState', s);
-
             dispatch('reloadProcessed');
         },
 

@@ -307,7 +307,7 @@ export default {
             this.checkLoading();
         }, false);
 
-        this.reloadProcessed();
+        // this.reloadProcessed();
         // this.processed.src = this.processedUrl;
         this.orig.src = `content://originals/${this.name}`;
         this.fg.src = 'content://templates/fg.png';

@@ -30,6 +30,7 @@ app.on('ready', () => {
 
 ipc.answerRenderer('process-photo', async (options) => {
     const photoPath = await editor.processPhoto(options);
+    console.log(photoPath);
     return protocolName + '://' + photoPath + '?t=' + Date.now();
 });
 
@@ -59,6 +60,7 @@ ipc.answerRenderer('save-preset', ({ name, preset }) => {
 
 ipc.answerRenderer('commit-session', async () => {
     console.log('commit-session');
+    if (!utils.session.state.length) return true;
     const token = simpleToken.gen(utils.config.state.web.secret);
     const url = utils.config.state.web.receiptUrl
         .replace(/\${token}/g, token)

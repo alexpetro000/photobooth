@@ -14,6 +14,7 @@ const printer = new ThermalPrinter({
 async function printReceipt(url) {
     const receipt = await fsPromises.readFile(path.join(utils.userDir, 'printer', 'receipt.js'));
     const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor;
+    printer.clear();
     await (new AsyncFunction('printer', 'url', receipt))(printer, url);
     printer.cut();
     await printer.execute();

@@ -93,7 +93,7 @@ async function processPhoto(options) {
             await process(input, preset, edited + extension);
             await fsPromises.writeFile(edited + '.json', JSON.stringify(preset));
         }
-        return options.tmp ? 'tmp/' : 'edited/' + options.name + extension;
+        return (options.tmp ? 'tmp/' : 'edited/') + options.name + extension;
     } else {
         return 'originals/' + options.name;
     }
