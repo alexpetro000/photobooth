@@ -1,9 +1,11 @@
 const im = require('imagemagick');
 const path = require('path');
+const fsPromises = require('fs').promises;
+const { isEqual } = require('lodash');
 
 const utils = require('./utils');
 
-function imConvert(args) {
+function imPromise(args) {
     return new Promise((resolve, reject) => {
         console.log(args.join(' '));
         im.convert(args, (err, stdout) => {
@@ -67,10 +69,37 @@ async function process(input, preset, output) {
     }
 
     args.push(output);
-    await imConvert(args);
+    await imPromise(args);
     return output;
+}
+
+async function processPhoto(options) {
+    console.log('process-photo', JSON.stringify(options));
+
+    if (!options.name) return false;
+
+    if (options.preset !== null || typeof options.preset === 'object') {
+        const preset = options.preset || utils.preset.state.default;
+        const edited = path.join(utils.photosDir, options.tmp ? 'tmp' : 'edited', options.name);
+        const extension = options.tmp ? '.png' : '.jpg';
+
+        const existingPreset = await fsPromises.access(edited + extension)
+            .then(() => fsPromises.readFile(edited + '.json'))
+            .then((buf) => JSON.parse(buf.toString()))
+            .catch(() => null);
+
+        if (!isEqual(preset, existingPreset)) {
+            const input = path.join(utils.photosDir, 'originals', options.name);
+            await process(input, preset, edited + extension);
+            await fsPromises.writeFile(edited + '.json', JSON.stringify(preset));
+        }
+        return options.tmp ? 'tmp/' : 'edited/' + options.name + extension;
+    } else {
+        return 'originals/' + options.name;
+    }
 }
 
 module.exports = {
     process,
+    processPhoto,
 };

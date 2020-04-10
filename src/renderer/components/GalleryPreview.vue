@@ -5,7 +5,7 @@
         transition="dialog-bottom-transition"
     )
         v-card.card
-            v-toolbar.toolbar(dense)
+            v-toolbar.toolbar()
                 v-btn(text icon @click="close")
                     v-icon mdi-close
                 v-spacer

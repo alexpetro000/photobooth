@@ -1,20 +1,19 @@
 const { app, protocol } = require('electron');
 const { ipcMain: ipc } = require('electron-better-ipc');
-const fs = require('fs');
-const fsPromises = require('fs').promises;
 const path = require('path');
-const uuidV4 = require('uuid').v4;
-const { isEqual } = require('lodash');
 const wifi = require('node-wifi');
 
 const utils = require('./utils');
 const camera = require('./camera');
 const editor = require('./editor');
+const uploader = require('./uploader');
+const printer = require('./printer');
+const simpleToken = require('./simpleToken');
 
 const protocolName = 'content';
 
 wifi.init({
-    iface: utils.config.state.iface,
+    iface: utils.config.state.wifiIface,
 });
 
 protocol.registerSchemesAsPrivileged([{
@@ -30,31 +29,8 @@ app.on('ready', () => {
 });
 
 ipc.answerRenderer('process-photo', async (options) => {
-    console.log('process-photo', JSON.stringify(options));
-
-    if (!options.name) return false;
-
-    if (options.preset !== null || typeof options.preset === 'object') {
-        const preset = options.preset || utils.preset.state.default;
-        const edited = path.join(utils.photosDir, options.tmp ? 'tmp' : 'edited', options.name);
-        const extension = options.tmp ? '.png' : '.jpg';
-
-        const existingPreset = await fsPromises.access(edited + extension)
-            .then(() => fsPromises.readFile(edited + '.json'))
-            .then((buf) => JSON.parse(buf.toString()))
-            .catch(() => null);
-
-        if (!isEqual(preset, existingPreset)) {
-            const input = path.join(utils.photosDir, 'originals', options.name);
-            await editor.process(input, preset, edited + extension);
-            fs.writeFileSync(edited + '.json', JSON.stringify(preset));
-        }
-        return `${protocolName}://${options.tmp ? 'tmp' : 'edited'}/${options.name}${extension}?t=${Date.now()}`;
-        // base64 = await image2base64(file);
-        // fs.unlink(file, (err) => { if (err) console.error(err); });
-    } else {
-        return `${protocolName}://originals/${options.name}?t=${Date.now()}`;
-    }
+    const photoPath = await editor.processPhoto(options);
+    return protocolName + '://' + photoPath + '?t=' + Date.now();
 });
 
 ipc.answerRenderer('fetch-config', () => {
@@ -81,29 +57,21 @@ ipc.answerRenderer('save-preset', ({ name, preset }) => {
     utils.session.state.find((p) => p.name === name).preset = preset;
 });
 
-ipc.answerRenderer('commit-session', () => {
+ipc.answerRenderer('commit-session', async () => {
     console.log('commit-session');
-
-    const obj = {
-        uuid: uuidV4(),
-        photos: utils.session.clone(),
-    };
-    utils.upload.state.push(obj);
+    const token = simpleToken.gen(utils.config.state.web.secret);
+    const url = utils.config.state.web.receiptUrl
+        .replace(/\${token}/g, token)
+        .replace(/\${name}/g, utils.config.state.web.name);
+    await printer.printReceipt(url);
+    uploader.commitSession(token, utils.session.clone());
     utils.session.clear();
-    // TODO: uploader
-    // TODO: printer
+    return true;
 });
 
 ipc.answerRenderer('delete-photo', (photo) => {
     console.log('delete-photo');
-    function logError(e) {
-        if (e) console.error(e);
-    }
-    fs.unlink(path.join(utils.photosDir, 'originals', photo.name), logError);
-    fs.unlink(path.join(utils.photosDir, 'edited', photo.name + '.jpg'), logError);
-    fs.unlink(path.join(utils.photosDir, 'edited', photo.name + '.json'), logError);
-    fs.unlink(path.join(utils.photosDir, 'tmp', photo.name + '.png'), logError);
-    fs.unlink(path.join(utils.photosDir, 'tmp', photo.name + '.json'), logError);
+    utils.deleteFiles(photo.name);
     const newState = utils.session.state.filter((item) => item.name !== photo.name);
     console.log('newState', newState);
     utils.session.state = newState;
@@ -118,3 +86,5 @@ ipc.answerRenderer('fetch-default-preset', async () => utils.preset.clone().defa
 ipc.answerRenderer('scan-wifi', () => wifi.scan());
 ipc.answerRenderer('get-current-wifi', () => wifi.getCurrentConnections());
 ipc.answerRenderer('connect-wifi', ({ ssid, password }) => wifi.connect({ ssid, password }));
+
+setTimeout(uploader.startUpload, 2000);

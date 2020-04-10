@@ -1,5 +1,6 @@
 const path = require('path');
 const fs = require('fs');
+
 const Conf = require('./conf');
 
 const config = Conf('config.json');
@@ -35,10 +36,21 @@ function getRandomString() {
     return Math.random().toString(36).substring(2);
 }
 
+function deleteFiles(name) {
+    const logError = () => {};
+    fs.unlink(path.join(photosDir, 'originals', name), logError);
+    fs.unlink(path.join(photosDir, 'edited', name + '.jpg'), logError);
+    fs.unlink(path.join(photosDir, 'edited', name + '.json'), logError);
+    fs.unlink(path.join(photosDir, 'tmp', name + '.png'), logError);
+    fs.unlink(path.join(photosDir, 'tmp', name + '.json'), logError);
+}
+
 module.exports = {
     getTimestamp,
     getDate,
     getRandomString,
+    userDir: Conf.userDir,
+    deleteFiles,
     photosDir,
     config,
     session,

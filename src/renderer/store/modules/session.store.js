@@ -112,8 +112,8 @@ export default {
         },
 
         async commitSession({ dispatch }) {
-            await ipc.callMain('commit-session');
-            dispatch('fetchSession');
+            const result = await ipc.callMain('commit-session');
+            if (result === true) dispatch('fetchSession');
         },
     },
 };

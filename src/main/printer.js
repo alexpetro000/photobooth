@@ -1,25 +1,24 @@
-// const escpos = require('escpos');
-// escpos.USB = require('escpos-usb');
-//
-// const utils = require('./utils');
-//
-// // Select the adapter based on your printer type
-// const device = new escpos.USB(+utils.config.state.printer.vendorId,
-//     +utils.config.state.printer.deviceId);
-// const printer = new escpos.Printer(device, options);
-//
-// function printQr(url) {
-//     device.open((error) => {
-//         printer
-//             .font('a')
-//             .align('ct')
-//             .size(1, 1)
-//             .encode('utf8')
-//             .text('QR code example')
-//             .align('ct')
-//             .qrimage('https://pxe.la', function (err) {
-//                 this.cut()
-//                     .close();
-//             });
-//     });
-// }
+const ThermalPrinter = require('node-thermal-printer').printer;
+const PrinterTypes = require('node-thermal-printer').types;
+const path = require('path');
+const fsPromises = require('fs').promises;
+
+const utils = require('./utils');
+
+const printer = new ThermalPrinter({
+    type: PrinterTypes.EPSON,
+    interface: utils.config.state.printer.iface,
+    lineCharacter: utils.config.state.printer.lineCharacter || '-',
+});
+
+async function printReceipt(url) {
+    const receipt = await fsPromises.readFile(path.join(utils.userDir, 'printer', 'receipt.js'));
+    const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor;
+    await (new AsyncFunction('printer', 'url', receipt))(printer, url);
+    printer.cut();
+    await printer.execute();
+}
+
+module.exports = {
+    printReceipt,
+};

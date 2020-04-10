@@ -30,5 +30,7 @@ module.exports = {
         'no-param-reassign': 'off',
         'no-else-return': 'off',
         'func-names': ['error', 'as-needed'],
+        'no-plusplus': 'off',
+        'no-continue': 'off',
     },
 };
