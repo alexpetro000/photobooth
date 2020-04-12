@@ -48,14 +48,13 @@ function uploadAuth(session) {
     });
 } */
 
-async function uploadById(accessToken, id, photo) {
+async function uploadById(accessToken, id, filePath, fileName) {
     const formData = new FormData();
-    const filePath = path.join(utils.photosDir, await editor.processPhoto(photo));
     console.log('uploadFilePath:', filePath);
     formData.append(
         'photo',
         fs.createReadStream(filePath),
-        photo.name,
+        fileName,
     );
 
     return fetch(url.resolve(utils.config.state.web.uploadUrl, 'upload/' + id), {
@@ -71,7 +70,8 @@ async function uploadSession(session, attempt = 0) {
     return session.photos.reduce(async (prevPromise, photo) => {
         const index = await prevPromise;
         if (photo.uploaded) return true;
-        const res = await uploadById(session.accessToken, index, photo);
+        const filePath = path.join(utils.photosDir, await editor.processPhoto(photo));
+        const res = await uploadById(session.accessToken, index, filePath, photo.name);
         console.log(res.statusCode, res.statusMessage);
         if (res.ok || res.statusCode === 406) { // 406 - Already uploaded
             photo.uploaded = true;
@@ -85,7 +85,7 @@ async function uploadSession(session, attempt = 0) {
             if (status === 401) { // 401 - Unauthorized
                 session.accessToken = false;
             } else {
-                console.error('Error. Http status:', status);
+                console.error(status);
             }
             return uploadSession(session, attempt + 1);
         });
@@ -107,14 +107,22 @@ async function startUpload() {
             i--;
         } catch (e) {
             console.error(e, session);
+            break;
         }
     }
 
     uploading = false;
-    setTimeout(startUpload, utils.config.state.uploadRetryInterval);
+    if (utils.upload.state.length) {
+        setTimeout(startUpload, utils.config.state.uploadRetryInterval);
+    }
 }
 
 function commitSession(token, photos) {
+    for (let i = photos.length - 1; i >= 0; i--) { // upload originals too
+        if (photos[i].preset !== null) {
+            photos.splice(i + 1, 0, { ...photos[i], preset: null });
+        }
+    }
     utils.upload.state.push({
         token,
         photos,
