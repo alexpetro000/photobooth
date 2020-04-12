@@ -65,7 +65,7 @@ async function uploadSession(session, attempt = 0) {
     if (!session.accessToken) await uploadAuth(session);
     return session.photos.reduce(async (prevPromise, photo) => {
         const index = await prevPromise;
-        if (photo.uploaded) return true;
+        if (photo.uploaded) return index + 1;
         const filePath = path.join(utils.photosDir, await editor.processPhoto(photo));
         console.log(photo, filePath);
         const res = await uploadById(session.accessToken, index, filePath);
