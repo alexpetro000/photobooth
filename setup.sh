@@ -6,6 +6,9 @@ apt-get -y install gphoto2
 
 # sudo apt-get install build-essential libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev
 
+### Printer ###
+sudo usermod -aG lp pi
+
 ### WIFI ###
 sudo apt-get -y install network-manager
 sudo apt-get -y purge openresolv dhcpcd5

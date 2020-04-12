@@ -45,7 +45,6 @@ class Conf {
         const obj = JSON.parse(fs.readFileSync(this._file));
         this.save = debounce(() => {
             fs.writeFileSync(this._file, JSON.stringify(this.state, null, 4));
-            console.log('config saved');
         }, debounceTime);
         this._state = proxify(obj, this.save);
     }
