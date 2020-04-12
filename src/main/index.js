@@ -28,6 +28,7 @@ function createWindow() {
         fullscreen: utils.config.state.window.fullscreen,
         webPreferences: {
             nodeIntegration: true,
+            webSecurity: false,
         },
     });
 
