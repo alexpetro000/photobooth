@@ -99,7 +99,13 @@ async function processPhoto(options) {
     }
 }
 
+let current = Promise.resolve();
+async function queuedProcessPhoto(options) {
+    current = current.then(() => processPhoto(options));
+    return current;
+}
+
 module.exports = {
     process,
-    processPhoto,
+    processPhoto: queuedProcessPhoto,
 };
