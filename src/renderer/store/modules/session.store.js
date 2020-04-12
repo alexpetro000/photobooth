@@ -2,7 +2,7 @@ import Vue from 'vue';
 
 const { ipcRenderer: ipc } = require('electron-better-ipc');
 
-let previewTimeoutId = null;
+const previewTimeoutId = null;
 
 export default {
     namespaced: true,
@@ -87,33 +87,18 @@ export default {
                 }, console.error);
         },
 
-        async takePhoto({
-            commit, dispatch, state, rootState,
-        }) {
-            commit('setPreview', true);
-            try {
-                const photo = await ipc.callMain('take-photo');
-                commit('addPhoto', photo);
-                await dispatch('processPhoto', photo);
-
-                console.log('setTimeout');
-                if (state.preview) {
-                    commit('setPreview', photo);
-                    clearTimeout(previewTimeoutId);
-                    previewTimeoutId = setTimeout(() => {
-                        console.log('timeout');
-                        if (state.preview === photo) commit('setPreview', false);
-                    }, rootState.config.previewTime);
-                }
-            } catch (e) {
-                console.error(e);
-                commit('setPreview', false);
-            }
+        takePhoto({ commit }) {
+            return ipc.callMain('take-photo')
+                .then((photo) => {
+                    commit('addPhoto', photo);
+                    console.log(photo);
+                    return photo;
+                });
         },
 
-        async commitSession({ dispatch }) {
-            const result = await ipc.callMain('commit-session');
-            if (result === true) dispatch('fetchSession');
+        commitSession({ dispatch }) {
+            ipc.callMain('commit-session').catch(console.error);
+            dispatch('fetchSession');
         },
     },
 };

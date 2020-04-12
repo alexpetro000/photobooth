@@ -60,15 +60,11 @@ ipc.answerRenderer('save-preset', ({ name, preset }) => {
 
 ipc.answerRenderer('commit-session', async () => {
     console.log('commit-session');
-    if (!utils.session.state.length) return true;
+    if (!utils.session.state.length) return;
     const token = simpleToken.gen(utils.config.state.web.secret);
-    const url = utils.config.state.web.receiptUrl
-        .replace(/\${token}/g, token)
-        .replace(/\${name}/g, utils.config.state.web.name);
-    await printer.printReceipt(url);
+    printer.printReceipt(token).catch(console.error);
     uploader.commitSession(token, utils.session.clone());
     utils.session.clear();
-    return true;
 });
 
 ipc.answerRenderer('delete-photo', (photo) => {

@@ -1,12 +1,12 @@
 <template lang="pug">
     v-container(fluid)
         v-row(dense)
-            v-col(cols="4")
+            v-col(sm="6" md="4" lg="3")
                 GalleryTakePhotoCard
             v-col(
                 v-for="photo in session.slice().reverse()"
                 :key="photo.name"
-                cols="4"
+                sm="6" md="4" lg="3"
             )
                 PhotoCard(:photo="photo")
 </template>

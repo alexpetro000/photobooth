@@ -11,11 +11,15 @@ const printer = new ThermalPrinter({
     lineCharacter: utils.config.state.printer.lineCharacter || '-',
 });
 
-async function printReceipt(url) {
-    const receipt = await fsPromises.readFile(path.join(utils.userDir, 'printer', 'receipt.js'));
+async function printReceipt(token) {
+    const args = { token, printer };
+
+    args.dir = path.join(utils.userDir, 'printer/');
+
+    const receipt = await fsPromises.readFile(path.join(args.dir, 'receipt.js'));
     const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor;
     printer.clear();
-    await (new AsyncFunction('printer', 'url', receipt))(printer, url);
+    await (new AsyncFunction('args', receipt))(args);
     printer.cut();
     await printer.execute();
 }
