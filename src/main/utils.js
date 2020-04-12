@@ -38,7 +38,7 @@ function getRandomString() {
 
 function deleteFiles(name) {
     const logError = () => {};
-    fs.unlink(path.join(photosDir, 'originals', name), logError);
+    fs.unlink(path.join(photosDir, 'originals', name + '.jpg'), logError);
     fs.unlink(path.join(photosDir, 'edited', name + '.jpg'), logError);
     fs.unlink(path.join(photosDir, 'edited', name + '.json'), logError);
     fs.unlink(path.join(photosDir, 'tmp', name + '.png'), logError);

@@ -12,14 +12,13 @@ const printer = new ThermalPrinter({
 });
 
 async function printReceipt(token) {
-    const args = { token, printer };
+    console.log(token);
 
-    args.dir = path.join(utils.userDir, 'printer/');
-
-    const receipt = await fsPromises.readFile(path.join(args.dir, 'receipt.js'));
+    const dir = path.join(utils.userDir, 'printer/');
+    const receipt = await fsPromises.readFile(path.join(dir, 'receipt.js'));
     const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor;
     printer.clear();
-    await (new AsyncFunction('args', receipt))(args);
+    await (new AsyncFunction('printer', 'token', 'dir', receipt))(printer, token, dir);
     printer.cut();
     await printer.execute();
 }

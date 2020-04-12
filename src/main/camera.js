@@ -33,7 +33,7 @@ function init() {
 function takePhoto() {
     return init().then(() => new Promise((resolve, reject) => {
         const filename = 'img_' + utils.getTimestamp();
-        const filePath = path.join(utils.photosDir, 'originals', filename);
+        const filePath = path.join(utils.photosDir, 'originals', filename + '.jpg');
         flashPin.set();
         exec(`gphoto2 --no-keep --force-overwrite --filename ${filePath} --capture-image-and-download`, (err, stdout, stderr) => {
             flashPin.reset();

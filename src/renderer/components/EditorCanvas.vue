@@ -309,7 +309,7 @@ export default {
 
         // this.reloadProcessed();
         // this.processed.src = this.processedUrl;
-        this.orig.src = `content://originals/${this.name}`;
+        this.orig.src = `content://originals/${this.name}.jpg`;
         this.fg.src = 'content://templates/fg.png';
         this.bg.src = 'content://templates/bg.jpg';
 

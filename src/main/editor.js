@@ -78,7 +78,7 @@ async function processPhoto(options) {
 
     if (!options.name) return false;
 
-    if (options.preset !== null || typeof options.preset === 'object') {
+    if (options.preset !== null) {
         const preset = options.preset || utils.preset.state.default;
         const edited = path.join(utils.photosDir, options.tmp ? 'tmp' : 'edited', options.name);
         const extension = options.tmp ? '.png' : '.jpg';
@@ -89,13 +89,13 @@ async function processPhoto(options) {
             .catch(() => null);
 
         if (!isEqual(preset, existingPreset)) {
-            const input = path.join(utils.photosDir, 'originals', options.name);
+            const input = path.join(utils.photosDir, 'originals', options.name + '.jpg');
             await process(input, preset, edited + extension);
             await fsPromises.writeFile(edited + '.json', JSON.stringify(preset));
         }
         return (options.tmp ? 'tmp/' : 'edited/') + options.name + extension;
     } else {
-        return 'originals/' + options.name;
+        return 'originals/' + options.name + '.jpg';
     }
 }
 

@@ -9,7 +9,6 @@ const utils = require('./utils');
 
 function uploadAuth(session) {
     const authPath = url.resolve(utils.config.state.web.uploadUrl, 'upload/start');
-    console.log(authPath);
     return fetch(authPath,
         {
             method: 'POST',
@@ -23,9 +22,7 @@ function uploadAuth(session) {
         })
         .then((res) => res.json())
         .then((json) => {
-            console.log(json);
             session.accessToken = json.access_token;
-            console.log(session.accessToken);
             return session.accessToken;
         });
 }
@@ -48,13 +45,12 @@ function uploadAuth(session) {
     });
 } */
 
-async function uploadById(accessToken, id, filePath, fileName) {
+async function uploadById(accessToken, id, filePath) {
     const formData = new FormData();
-    console.log('uploadFilePath:', filePath);
     formData.append(
         'photo',
         fs.createReadStream(filePath),
-        fileName,
+        filePath.replace(/^.*\//, ''),
     );
 
     return fetch(url.resolve(utils.config.state.web.uploadUrl, 'upload/' + id), {
@@ -71,11 +67,10 @@ async function uploadSession(session, attempt = 0) {
         const index = await prevPromise;
         if (photo.uploaded) return true;
         const filePath = path.join(utils.photosDir, await editor.processPhoto(photo));
-        const res = await uploadById(session.accessToken, index, filePath, photo.name);
-        console.log(res.statusCode, res.statusMessage);
+        console.log(photo, filePath);
+        const res = await uploadById(session.accessToken, index, filePath);
         if (res.ok || res.statusCode === 406) { // 406 - Already uploaded
             photo.uploaded = true;
-            utils.deleteFiles(photo.name);
             return index + 1;
         } else {
             throw res.statusCode;
@@ -94,15 +89,14 @@ async function uploadSession(session, attempt = 0) {
 let uploading = false;
 
 async function startUpload() {
-    if (uploading || !utils.upload.state.length) return;
+    if (uploading) return;
     uploading = true;
-    console.log('StartUpload: ', utils.upload.state);
     for (let i = 0; i < utils.upload.state.length; i++) {
         const session = utils.upload.state[i];
-        console.log('Session: ', session);
         try {
             // eslint-disable-next-line no-await-in-loop
             await uploadSession(session);
+            session.photos.forEach((photo) => utils.deleteFiles(photo.name));
             utils.upload.state.splice(i, 1);
             i--;
         } catch (e) {
