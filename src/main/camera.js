@@ -36,6 +36,7 @@ function takePhoto() {
         const filePath = path.join(utils.photosDir, 'originals', filename);
         flashPin.set();
         exec(`gphoto2 --no-keep --force-overwrite --filename ${filePath} --capture-image-and-download`, (err, stdout, stderr) => {
+            flashPin.reset();
             if (err) {
                 this.initialized = false;
                 reject(new Error(stderr));
@@ -43,7 +44,6 @@ function takePhoto() {
                 resolve(filename);
             }
         });
-        flashPin.reset();
     }));
 }
 
