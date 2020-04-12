@@ -5,11 +5,12 @@ const { isEqual } = require('lodash');
 
 const utils = require('./utils');
 
+im.convert.path = 'nice';
+
 function imPromise(args) {
     return new Promise((resolve, reject) => {
-        console.log(args.join(' '));
+        args.unshift('-n', '10', 'convert');
         im.convert(args, (err, stdout) => {
-            console.log(stdout);
             if (err) reject(stdout);
             resolve(stdout);
         });
@@ -17,7 +18,6 @@ function imPromise(args) {
 }
 
 async function process(input, preset, output) {
-    console.log('processing:', preset);
     const args = [input];
     if ('crop' in preset) {
         const { crop } = preset;
