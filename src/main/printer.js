@@ -2,6 +2,7 @@ const ThermalPrinter = require('node-thermal-printer').printer;
 const PrinterTypes = require('node-thermal-printer').types;
 const path = require('path');
 const fsPromises = require('fs').promises;
+const moment = require('moment');
 
 const utils = require('./utils');
 
@@ -18,7 +19,7 @@ async function printReceipt(token) {
     const receipt = await fsPromises.readFile(path.join(dir, 'receipt.js'));
     const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor;
     printer.clear();
-    await (new AsyncFunction('printer', 'token', 'dir', receipt))(printer, token, dir);
+    await (new AsyncFunction('printer', 'token', 'dir', 'moment', receipt))(printer, token, dir, moment);
     printer.cut();
     await printer.execute();
 }

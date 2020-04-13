@@ -1,6 +1,7 @@
 <template lang="pug">
     v-content
         SystemBar
+        GalleryPreview
         v-app-bar(app dense)
             v-tabs(v-model="currentTab" grow)
                 v-tab Express photo
@@ -9,7 +10,6 @@
             v-tab-item.height-100
                 ExpressPhoto
             v-tab-item.theight-100
-                GalleryPreview
                 Gallery
 </template>
 
