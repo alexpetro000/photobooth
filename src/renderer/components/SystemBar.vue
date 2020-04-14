@@ -12,7 +12,7 @@
                         v-list-item-icon
                             v-icon {{getWifiIcon(currentWifi.quality)}}
                     v-divider
-                    v-list-item(v-for="net in nets" @click="askPassword(net.ssid)")
+                    v-list-item(v-for="net in nets" :key="net.ssid" @click="askPassword(net.ssid)")
                         v-list-item-title {{net.ssid}}
                         v-list-item-icon
                             v-icon {{getWifiIcon(net.quality)}}

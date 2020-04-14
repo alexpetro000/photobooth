@@ -112,9 +112,14 @@ async function startUpload() {
 }
 
 function commitSession(token, photos) {
-    for (let i = photos.length - 1; i >= 0; i--) { // upload originals too
-        if (photos[i].preset !== null) {
-            photos.splice(i + 1, 0, { ...photos[i], preset: null });
+    if (utils.config.state.uploadOriginal) {
+        for (let i = photos.length - 1; i >= 0; i--) { // upload originals too
+            if (photos[i].preset !== null) {
+                photos.splice(i + 1, 0, {
+                    ...photos[i],
+                    preset: null,
+                });
+            }
         }
     }
     utils.upload.state.push({

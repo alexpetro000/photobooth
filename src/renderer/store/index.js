@@ -15,6 +15,7 @@ export default new Vuex.Store({
     state: {
         config: undefined,
         msg: '',
+        turnOnPrinterDialog: true,
     },
     mutations: {
         setConfig(state, config) {
@@ -22,6 +23,9 @@ export default new Vuex.Store({
         },
         setMsg(state, msg) {
             state.msg = msg;
+        },
+        setTurnOnPrinterDialog(state, v) {
+            state.turnOnPrinterDialog = v;
         },
     },
     actions: {

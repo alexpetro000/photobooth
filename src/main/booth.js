@@ -2,6 +2,7 @@ const { app, protocol } = require('electron');
 const { ipcMain: ipc } = require('electron-better-ipc');
 const path = require('path');
 const wifi = require('node-wifi');
+const { exec } = require('child_process');
 
 const utils = require('./utils');
 const camera = require('./camera');
@@ -78,6 +79,8 @@ ipc.answerRenderer('delete-photo', (photo) => {
 ipc.answerRenderer('save-default-preset', (preset) => {
     utils.preset.state.default = preset;
 });
+
+ipc.answerRenderer('shutdown', () => exec('shutdown now'));
 
 ipc.answerRenderer('fetch-default-preset', async () => utils.preset.clone().default);
 
