@@ -7,13 +7,33 @@ const utils = require('./utils');
 
 im.convert.path = 'nice';
 
+let converterBusy = false;
+const converterQueue = [];
+
+function runNext() {
+    if (converterQueue.length && !converterBusy) {
+        const run = converterQueue.shift();
+        run();
+    }
+}
+
 function imPromise(args) {
     return new Promise((resolve, reject) => {
-        args.unshift('-n', '10', 'convert');
-        im.convert(args, (err, stdout) => {
-            if (err) reject(stdout);
-            resolve(stdout);
-        });
+        const run = () => {
+            converterBusy = true;
+            args.unshift('-n', '10', 'convert');
+            im.convert(args, (err, stdout) => {
+                if (err) reject(stdout);
+                resolve(stdout);
+                converterBusy = false;
+                runNext();
+            });
+        };
+        if (!converterBusy) {
+            run();
+        } else {
+            converterQueue.push(run);
+        }
     });
 }
 
@@ -99,13 +119,7 @@ async function processPhoto(options) {
     }
 }
 
-let current = Promise.resolve();
-async function queuedProcessPhoto(options) {
-    current = current.then(() => processPhoto(options));
-    return current;
-}
-
 module.exports = {
     process,
-    processPhoto: queuedProcessPhoto,
+    processPhoto,
 };

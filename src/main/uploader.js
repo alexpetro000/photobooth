@@ -7,7 +7,7 @@ const fs = require('fs');
 const editor = require('./editor');
 const utils = require('./utils');
 
-function uploadAuth(session) {
+function uploadAuth(token, length) {
     const authPath = url.resolve(utils.config.state.web.uploadUrl, 'upload/start');
     return fetch(authPath,
         {
@@ -15,37 +15,16 @@ function uploadAuth(session) {
             body: JSON.stringify({
                 name: utils.config.state.web.name,
                 secret: utils.config.state.web.secret,
-                token: session.token,
-                count: session.photos.length,
+                token,
+                count: length,
             }),
             headers: { 'Content-Type': 'application/json' },
         })
         .then((res) => res.json())
-        .then((json) => {
-            session.accessToken = json.access_token;
-            return session.accessToken;
-        });
+        .then((json) => json.access_token);
 }
 
-/* async function uploadAll(accessToken, photos) {
-    const formData = new FormData();
-    photos.forEach((photo) => {
-        formData.append(
-            'photos',
-            fs.createReadStream(path.join(utils.photosDir, editor.processPhoto(photo))),
-            photo.name,
-        );
-    });
-
-    return fetch(url.resolve(utils.config.state.web.uploadUrl, 'upload/all'), {
-        method: 'POST',
-        headers: { Authorization: 'Bearer ' + accessToken },
-        body: formData,
-        redirect: 'follow',
-    });
-} */
-
-async function uploadById(accessToken, id, filePath) {
+async function uploadById(uploadToken, id, filePath) {
     const formData = new FormData();
     formData.append(
         'photo',
@@ -55,64 +34,87 @@ async function uploadById(accessToken, id, filePath) {
 
     return fetch(url.resolve(utils.config.state.web.uploadUrl, 'upload/' + id), {
         method: 'POST',
-        headers: { Authorization: 'Bearer ' + accessToken },
+        headers: { Authorization: 'Bearer ' + uploadToken },
         body: formData,
     });
 }
 
+async function uploadPhoto(photo, uploadToken) {
+    function processPhoto(processAttempt = 0) {
+        if (processAttempt > 3) return false;
+        return editor.processPhoto(photo).catch(() => processPhoto(processAttempt + 1));
+    }
+
+    const processedPhoto = await processPhoto();
+    if (!processedPhoto) return true;
+
+    const filePath = path.join(utils.photosDir, processedPhoto);
+    console.log(photo, filePath);
+    const res = await uploadById(uploadToken, photo.index + 1, filePath);
+    if (res.ok || res.statusCode === 406) { // 406 - Already uploaded
+        return true;
+    } else {
+        throw res.statusCode;
+    }
+}
+
 async function uploadSession(session, attempt = 0) {
     if (attempt > 2) throw new Error('Max upload attempts exceeded');
-    if (!session.accessToken) await uploadAuth(session);
-    return session.photos.reduce(async (prevPromise, photo) => {
-        const index = await prevPromise;
-        if (photo.uploaded) return index + 1;
-        const filePath = path.join(utils.photosDir, await editor.processPhoto(photo));
-        console.log(photo, filePath);
-        const res = await uploadById(session.accessToken, index, filePath);
-        if (res.ok || res.statusCode === 406) { // 406 - Already uploaded
-            photo.uploaded = true;
-            return index + 1;
-        } else {
-            throw res.statusCode;
-        }
-    }, Promise.resolve(1))
-        .catch((status) => {
-            if (status === 401) { // 401 - Unauthorized
-                session.accessToken = false;
-            } else {
-                console.error(status);
+
+    if (!session.uploadToken) {
+        session.uploadToken = await uploadAuth(session.token, session.length);
+    }
+
+    return new Promise((resolve, reject) => {
+        const run = () => {
+            if (!session.photos.length) {
+                console.log('session uploaded!');
+                resolve();
+                return;
             }
-            return uploadSession(session, attempt + 1);
-        });
+            const photo = session.photos[0];
+            console.log(photo);
+            uploadPhoto(photo, session.uploadToken)
+                .then(() => {
+                    console.log('photo uploaded', photo);
+                    utils.deleteFiles(photo.name);
+                    session.photos.shift();
+                    run();
+                }, (err) => {
+                    console.log('rejected', err);
+                    reject(err);
+                });
+        };
+        run();
+    });
 }
 
 let uploading = false;
 
-async function startUpload() {
+function startUpload() {
     if (uploading) return;
     uploading = true;
-    for (let i = 0; i < utils.upload.state.length; i++) {
-        const session = utils.upload.state[i];
-        try {
-            // eslint-disable-next-line no-await-in-loop
-            await uploadSession(session);
-            session.photos.forEach((photo) => utils.deleteFiles(photo.name));
-            utils.upload.state.splice(i, 1);
-            i--;
-        } catch (e) {
-            console.error(e, session);
-            break;
-        }
-    }
 
-    uploading = false;
-    if (utils.upload.state.length) {
-        setTimeout(startUpload, utils.config.state.uploadRetryInterval);
-    }
+    const run = () => {
+        if (!utils.upload.state.length) {
+            uploading = false;
+            return;
+        }
+        const session = utils.upload.state[0];
+        uploadSession(session)
+            .then(() => {
+                utils.upload.state.shift();
+                run();
+            }, (e) => {
+                console.log(e);
+                setTimeout(run, utils.config.state.uploadRetryInterval);
+            });
+    };
+    run();
 }
 
 function commitSession(token, photos) {
-    if (utils.config.state.uploadOriginal) {
+    if (utils.config.state.uploadOriginals) {
         for (let i = photos.length - 1; i >= 0; i--) { // upload originals too
             if (photos[i].preset !== null) {
                 photos.splice(i + 1, 0, {
@@ -122,11 +124,19 @@ function commitSession(token, photos) {
             }
         }
     }
+
+    console.log('PHOTOS:', photos);
+
+    photos.forEach((photo, i) => {
+        photo.index = i;
+    });
+
     utils.upload.state.push({
         token,
+        length: photos.length,
         photos,
     });
-    startUpload().catch(console.error);
+    startUpload();
 }
 
 module.exports = {

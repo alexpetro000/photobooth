@@ -2,6 +2,7 @@ const { debounce, cloneDeep } = require('lodash');
 const path = require('path');
 const fs = require('fs');
 const { app } = require('electron');
+const util = require('util');
 
 const userDir = app.getPath('userData');
 
@@ -9,7 +10,7 @@ function proxify(root, callback) {
     function makeHandler() {
         return {
             set(target, key, value) {
-                if (typeof value === 'object' && value !== null) {
+                if (typeof value === 'object' && value !== null && !util.types.isProxy(value)) {
                     // eslint-disable-next-line no-use-before-define
                     Reflect.set(target, key, deepProxy(value));
                     callback();
