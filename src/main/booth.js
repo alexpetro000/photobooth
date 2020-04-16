@@ -86,6 +86,10 @@ ipc.answerRenderer('fetch-default-preset', async () => utils.preset.clone().defa
 
 ipc.answerRenderer('scan-wifi', () => wifi.scan());
 ipc.answerRenderer('get-current-wifi', () => wifi.getCurrentConnections());
-ipc.answerRenderer('connect-wifi', ({ ssid, password }) => wifi.connect({ ssid, password }));
+ipc.answerRenderer('connect-wifi', async ({ ssid, password }) => {
+    const result = await wifi.connect({ ssid, password });
+    console.log(result);
+    return result;
+});
 
 setTimeout(uploader.startUpload, 2000);

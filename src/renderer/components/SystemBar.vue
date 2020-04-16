@@ -18,7 +18,7 @@
                             v-icon {{getWifiIcon(net.quality)}}
         v-dialog(v-model="passwordDialog")
             v-card
-                v-text-field(v-model="password" @focus="")
+                v-text-field(v-model="password" single-line autofocus)
                 v-card-actions
                     v-btn(@click="connect") Connect
             SimpleKeyboard(@onChange="keyboardChange" :input="password")
